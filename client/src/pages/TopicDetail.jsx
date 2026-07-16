@@ -68,6 +68,24 @@ const getYouTubeEmbedUrl = (url) => {
   return null;
 };
 
+// Helper to safely append enablejsapi and origin parameters to avoid postMessage origin mismatch errors
+const appendYTParams = (url) => {
+  if (!url || typeof url !== 'string') return "";
+  try {
+    let updatedUrl = url;
+    if (!updatedUrl.includes('enablejsapi=1')) {
+      const separator = updatedUrl.includes('?') ? '&' : '?';
+      updatedUrl = `${updatedUrl}${separator}enablejsapi=1`;
+    }
+    if (!updatedUrl.includes('origin=') && typeof window !== 'undefined') {
+      updatedUrl = `${updatedUrl}&origin=${encodeURIComponent(window.location.origin)}`;
+    }
+    return updatedUrl;
+  } catch (e) {
+    return url;
+  }
+};
+
 const TopicDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -1835,7 +1853,7 @@ const TopicDetail = () => {
                       key={`video-${activeCheckpoint}-${selectedLang}`}
                       id={`checkpoint-video-${activeCheckpoint}`}
                       className="w-full h-full"
-                      src={cpVideoUrl}
+                      src={cpVideoUrl ? appendYTParams(cpVideoUrl) : ""}
                       title={`${CHECKPOINT_LABELS[activeCheckpoint]} Tutorial`}
                       frameBorder="0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -2425,7 +2443,7 @@ const TopicDetail = () => {
                 <div className="aspect-video bg-black rounded-xl overflow-hidden border border-[var(--border)] shadow-lg mb-6 max-w-4xl mx-auto w-full">
                   <iframe
                     id="tutorial-video-iframe"
-                    src={activeVideoEmbedUrl ? activeVideoEmbedUrl + (activeVideoEmbedUrl.includes('?') ? '&' : '?') + "enablejsapi=1" : "https://www.youtube.com/embed/EAR7De6Goz4"}
+                    src={appendYTParams(activeVideoEmbedUrl || "https://www.youtube.com/embed/EAR7De6Goz4")}
                     className="w-full h-full"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -2615,7 +2633,7 @@ const TopicDetail = () => {
             <div className="flex-1 flex flex-col bg-black relative w-full h-full">
               <iframe
                 id="tutorial-video-iframe"
-                src={activeVideoEmbedUrl ? `${activeVideoEmbedUrl}${activeVideoEmbedUrl.includes('?') ? '&' : '?'}enablejsapi=1` : "https://www.youtube.com/embed/EAR7De6Goz4"}
+                src={appendYTParams(activeVideoEmbedUrl || "https://www.youtube.com/embed/EAR7De6Goz4")}
                 className="w-full flex-1"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -2820,7 +2838,7 @@ const TopicDetail = () => {
                         <div className="aspect-video bg-black shadow rounded-xl overflow-hidden border border-[var(--border)]">
                           <iframe
                             className="w-full h-full"
-                            src={`https://www.youtube.com/embed/${langContent.youtubeVideoId}?rel=0&modestbranding=1&showinfo=0`}
+                            src={appendYTParams(`https://www.youtube.com/embed/${langContent.youtubeVideoId}?rel=0&modestbranding=1&showinfo=0`)}
                             title={topic.title}
                             frameBorder="0"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

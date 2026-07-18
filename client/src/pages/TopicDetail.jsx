@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +11,8 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import Editor from '@monaco-editor/react';
+import CodeEditor from '../components/CodeEditor';
+import BadgeVisual, { getBadgeMetadata } from '../components/BadgeVisual';
 import { getDsaLanguageContent, getCheckpointContent } from '../utils/dsaContent';
 import { getWebDevLanguageContent, getWebDevCheckpointContent } from '../utils/webDevContent';
 import { getLessonAssessment, normalizeDsaLanguage } from '../utils/dsaPersonalization';
@@ -177,7 +178,7 @@ const TopicDetail = () => {
   // Custom Dynamic Languages & Tracks State
   const [selectedLang, setSelectedLang] = useState(() => normalizeDsaLanguage(localStorage.getItem('dsa_lang') || 'cpp'));
   const [useStriverAdvanced, setUseStriverAdvanced] = useState(() => localStorage.getItem('striver_advanced') === 'true');
-  const [dsaCourse, setDsaCourse] = useState(() => localStorage.getItem('dsa_course') || 'default');
+  const dsaCourse = topic?.instructor === 'Love Babbar' ? 'default' : 'striver';
   
   const langDisplayMap = { cpp: 'C++', java: 'Java', python: 'Python', javascript: 'JavaScript' };
   const currentLangName = langDisplayMap[selectedLang] || 'C++';
@@ -313,7 +314,7 @@ const TopicDetail = () => {
   }, [id, activeDifficulty]);
 
   // Advanced Layout Resizer & Fullscreen Editor States
-  const [leftWidth, setLeftWidth] = useState(45); // percentage width for left details pane
+  const [leftWidth, setLeftWidth] = useState(60); // percentage width for left details pane
   const [isDragging, setIsDragging] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -340,6 +341,7 @@ const TopicDetail = () => {
   // Window mouse resize dragging event listeners
   const startResize = (e) => {
     setIsDragging(true);
+    document.body.classList.add('workspace-dragging');
     e.preventDefault();
   };
 
@@ -358,6 +360,7 @@ const TopicDetail = () => {
 
     const handleMouseUp = () => {
       setIsDragging(false);
+      document.body.classList.remove('workspace-dragging');
     };
 
     if (isDragging) {
@@ -404,9 +407,7 @@ const TopicDetail = () => {
     localStorage.setItem('striver_advanced', useStriverAdvanced.toString());
   }, [useStriverAdvanced]);
 
-  useEffect(() => {
-    localStorage.setItem('dsa_course', dsaCourse);
-  }, [dsaCourse]);
+
 
   // Load topic & dependencies
   useEffect(() => {
@@ -507,7 +508,7 @@ const TopicDetail = () => {
     return ['cpp', 'java', 'python', 'javascript'];
   }, [isWebDevDomain, topic]);
 
-  const isCheckpointModule = shouldSplitWorkspace && (topic?.isCheckpointModule === true || (topic?.title || '').toLowerCase() === 'start coding');
+  const isCheckpointModule = shouldSplitWorkspace && (dsaCourse !== 'default' && dsaCourse !== 'babbar') && (topic?.isCheckpointModule === true || (topic?.title || '').toLowerCase() === 'start coding');
 
   const langContent = useMemo(() => {
     if (isDsaDomain) {
@@ -1214,7 +1215,7 @@ const TopicDetail = () => {
       `⚙️ Executing standard check assertions...`
     ]);
 
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       try {
         const { results, logs } = executeSandbox(editorCode, selectedLang, langContent.testCases);
         setTestResults(results);
@@ -1228,12 +1229,12 @@ const TopicDetail = () => {
           toast.success("All test cases passed! Ready to submit! 🏆", { icon: '✨' });
         } else {
           setCompilerStatus('failed');
-          setChallengePassed(false); // Strictly reset
+          setChallengePassed(false);
           playSoundEffect('error');
           toast.error("Some test cases failed. Keep refining your logic!");
         }
       } catch (err) {
-        setChallengePassed(false); // Strictly reset
+        setChallengePassed(false);
         if (err.message.includes("Compilation Error")) {
           setCompilerStatus('compile_error');
         } else {
@@ -1243,7 +1244,7 @@ const TopicDetail = () => {
         playSoundEffect('error');
         toast.error("Compilation / Execution Failed!");
       }
-    }, 1200);
+    });
   };
 
   const getRank = (xp) => {
@@ -1545,18 +1546,7 @@ const TopicDetail = () => {
     };
 
     return (
-      <div className="flex h-full w-full overflow-hidden bg-[var(--bg-main)] relative">
-        {isDragging && (
-          <style>{`
-            iframe {
-              pointer-events: none !important;
-            }
-            body {
-              user-select: none !important;
-              -webkit-user-select: none !important;
-            }
-          `}</style>
-        )}
+      <div className={`flex h-full w-full overflow-hidden bg-[var(--bg-main)] relative ${isDragging ? 'workspace-dragging' : ''}`}>
 
         {/* Backdrop overlay for Checkpoint sidebar on mobile */}
         {isMobile && isCpSidebarOpen && (
@@ -1623,36 +1613,7 @@ const TopicDetail = () => {
             </div>
           </div>
 
-          {/* C++ Playlist/Course Selector */}
-          {selectedLang === 'cpp' && (
-            <div className="px-4 py-2 border-b border-[var(--border)] shrink-0 bg-[var(--bg-sub)]/30">
-              <div className="text-[8px] font-black text-[var(--text-light)] uppercase tracking-wider mb-2 flex items-center gap-1">
-                <FiYoutube className="text-red-500" /> C++ DSA Playlist Course
-              </div>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setDsaCourse('default')}
-                  className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
-                    dsaCourse === 'default'
-                      ? 'bg-[var(--primary)] text-[var(--text-main)] shadow-sm'
-                      : 'bg-[var(--bg-sub)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                  }`}
-                >
-                  Love Babbar
-                </button>
-                <button
-                  onClick={() => setDsaCourse('striver')}
-                  className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
-                    dsaCourse === 'striver'
-                      ? 'bg-[var(--primary)] text-[var(--text-main)] shadow-sm'
-                      : 'bg-[var(--bg-sub)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                  }`}
-                >
-                  Striver A2Z
-                </button>
-              </div>
-            </div>
-          )}
+
 
           {/* Checkpoint navigation list */}
           <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
@@ -2084,23 +2045,17 @@ const TopicDetail = () => {
             ) : (
             <>
             {/* Monaco Editor */}
-            <div className="flex-1 overflow-hidden min-h-[400px]" style={{ minHeight: '400px' }}>
-              <Editor
-                height="100%"
+            <div className="flex-1 overflow-hidden min-h-[400px] w-full relative" style={{ minHeight: '400px' }}>
+              <CodeEditor
                 language={selectedLang === 'js' ? 'javascript' : selectedLang}
                 value={editorCode || (cpContent?.editorBoilerplate || '')}
                 theme={editorTheme}
                 onChange={(val) => setEditorCode(val || '')}
                 options={{
                   fontSize: 13,
-                  minimap: { enabled: false },
-                  scrollBeyondLastLine: false,
-                  lineNumbers: 'on',
-                  automaticLayout: true,
                   tabSize: 4,
                   wordWrap: 'on',
-                  padding: { top: 16 },
-                  fontLigatures: true
+                  padding: { top: 16 }
                 }}
               />
             </div>
@@ -2285,18 +2240,7 @@ const TopicDetail = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-[var(--bg-main)] transition-colors duration-300 relative select-none">
-      {isDragging && (
-        <style>{`
-          iframe {
-            pointer-events: none !important;
-          }
-          body {
-            user-select: none !important;
-            -webkit-user-select: none !important;
-          }
-        `}</style>
-      )}
+    <div className={`flex flex-col lg:flex-row h-full w-full overflow-hidden bg-[var(--bg-main)] transition-colors duration-300 relative select-none ${isDragging ? 'workspace-dragging' : ''}`}>
       
       {/* Background Confetti Elements */}
 
@@ -2628,16 +2572,18 @@ const TopicDetail = () => {
 
           {/* Left Pane Scrollable Content */}
           {learningStep === 1 ? (
-            <div className="flex-1 flex flex-col bg-black relative w-full h-full">
-              <iframe
-                id="tutorial-video-iframe"
-                src={appendYTParams(activeVideoEmbedUrl || "https://www.youtube.com/embed/EAR7De6Goz4?list=PLgUwDviBIf0oF6QL8m22w1hIDC1vJ_BHz")}
-                className="w-full flex-1"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-              <div className="p-4 bg-[#18181b] border-t border-[#2e2e2e] flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+            <div className="flex-1 flex flex-col bg-[#18181b] relative w-full h-full">
+              <div className="shrink-0 bg-black aspect-video relative border-b border-[#2e2e2e]">
+                <iframe
+                  id="tutorial-video-iframe"
+                  src={appendYTParams(activeVideoEmbedUrl || "https://www.youtube.com/embed/EAR7De6Goz4?list=PLgUwDviBIf0oF6QL8m22w1hIDC1vJ_BHz")}
+                  className="w-full h-full"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+              <div className="p-4 flex flex-col xl:flex-row xl:items-start justify-between gap-4 flex-1">
                 <div className="space-y-1">
                   <h2 className="text-white text-lg font-bold">{topic?.title || "Coding Foundations"}</h2>
                   <div className="flex items-center gap-2">
@@ -3118,31 +3064,7 @@ const TopicDetail = () => {
                 ))}
               </div>
 
-              {/* C++ Playlist/Course Selector */}
-              {selectedLang === 'cpp' && (
-                <div className="flex items-center gap-1 bg-[var(--bg-sub)] p-0.5 rounded-lg border border-[var(--border)]">
-                  <button
-                    onClick={() => setDsaCourse('default')}
-                    className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all ${
-                      dsaCourse === 'default'
-                        ? 'bg-[var(--primary)] text-[var(--text-main)] shadow-sm'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                    }`}
-                  >
-                    Love Babbar
-                  </button>
-                  <button
-                    onClick={() => setDsaCourse('striver')}
-                    className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all ${
-                      dsaCourse === 'striver'
-                        ? 'bg-[var(--primary)] text-[var(--text-main)] shadow-sm'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                    }`}
-                  >
-                    Striver
-                  </button>
-                </div>
-              )}
+
             </div>
 
             <div className="flex items-center gap-2">
@@ -3177,22 +3099,15 @@ const TopicDetail = () => {
           </div>
 
           {/* Monaco Editor Container */}
-          <div className="flex-1 min-h-[250px] relative overflow-hidden bg-[#1e1e1e]">
-            <Editor
-              height="100%"
+          <div className="flex-1 min-h-[250px] w-full relative overflow-hidden bg-[#1e1e1e] editor-glow">
+            <CodeEditor
               language={selectedLang === 'js' ? 'javascript' : selectedLang}
               value={editorCode}
               beforeMount={handleEditorWillMount}
               onChange={(val) => setEditorCode(val || '')}
               theme={editorTheme}
               options={{
-                fontSize: 13,
-                fontFamily: 'Fira Code, monospace',
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                lineNumbers: 'on',
-                cursorBlinking: 'smooth',
-                automaticLayout: true
+                fontSize: 13
               }}
             />
           </div>

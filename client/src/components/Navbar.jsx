@@ -9,7 +9,7 @@ import {
 } from 'react-icons/fi';
 import { MdOutlineDashboard } from "react-icons/md";
 
-const Navbar = ({ isAdmin }) => {
+const Navbar = ({ isAdmin, isScrolled = false, isVisible = true }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const notifRef = useRef(null);
@@ -107,7 +107,9 @@ const Navbar = ({ isAdmin }) => {
 
   return (
     <>
-      <header className="h-[72px] border-b border-[var(--border)] bg-[var(--bg-card)]/90 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-4 lg:px-8 transition-colors duration-300">
+      <header className={`flex items-center justify-between px-4 lg:px-8 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] absolute w-full z-50 h-[72px] top-0 left-0 right-0 bg-transparent ${
+        !isVisible ? '-translate-y-[120%] opacity-0' : 'translate-y-0 opacity-100'
+      }`}>
         
         {/* Left: Logo & Brand */}
         <div className="flex items-center gap-3 lg:gap-6">

@@ -57,6 +57,7 @@ const Roadmap = () => {
   const [domainData, setDomainData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeLevel, setActiveLevel] = useState(null);
+  const [dsaInstructor, setDsaInstructor] = useState('striver');
 
   // Dynamic language selection state synced with local cache
   const [selectedLang, setSelectedLang] = useState(() => normalizeDsaLanguage(localStorage.getItem('dsa_lang') || 'cpp'));
@@ -458,37 +459,80 @@ const Roadmap = () => {
             >
               <div className="absolute top-[-20%] left-[-20%] w-64 h-64 bg-[var(--primary)]/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-[var(--border)] relative z-10">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl bg-[var(--bg-sub)] border border-[var(--border)] w-10 h-10 flex items-center justify-center rounded-xl shadow-inner shrink-0">
-                    {getLevelIcon(activePhase ? phases.indexOf(activePhase) : 0, domain.slug)}
-                  </span>
-                  <div>
-                    <h2 className="text-lg font-black text-[var(--text-main)] tracking-tight leading-none">
-                      {isDSA ? (dsaLevelNames[activeLevel] || activePhase?.name || 'Level') : (activePhase?.name || 'Level')}
-                    </h2>
-                    <div className="text-[var(--primary)] font-black text-[9px] tracking-widest uppercase mt-1">Level {activeLevel}</div>
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-8 lg:gap-12 relative z-10">
+                {/* Left Side: Title and Rewards */}
+                <div className="flex flex-col gap-6 lg:border-r border-[var(--border)] lg:pr-8">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-4 mb-4">
+                      <span className="text-5xl bg-[var(--bg-sub)] border border-[var(--border)] w-16 h-16 flex items-center justify-center rounded-2xl shadow-inner shrink-0">
+                        {getLevelIcon(activePhase ? phases.indexOf(activePhase) : 0, domain.slug)}
+                      </span>
+                      <div>
+                        <h2 className="text-3xl font-black text-[var(--text-main)] tracking-tight">
+                          {isDSA ? (dsaLevelNames[activeLevel] || activePhase?.name || 'Level') : (activePhase?.name || 'Level')}
+                        </h2>
+                        <div className="text-[var(--primary)] font-black text-xs tracking-widest uppercase mt-0.5">Level {activeLevel} Expedition</div>
+                      </div>
+                    </div>
+                    <p className="text-[var(--text-muted)] leading-relaxed max-w-2xl font-semibold text-sm">
+                      {activePhase?.description || "Complete these challenges to master this level and earn massive XP rewards."}
+                    </p>
+                  </div>
+                  
+                  {/* Rewards Pill & Skip Level Actions */}
+                  <div className="flex flex-col gap-4 w-full">
+                    <div className="bg-[var(--bg-sub)] border border-[var(--border)] p-5 rounded-2xl shadow-sm w-full">
+                      <div className="text-[9px] font-black text-[var(--primary)] uppercase tracking-widest mb-3">Completion Rewards</div>
+                      <div className="space-y-2.5">
+                        <div className="flex items-center gap-3 text-[var(--text-main)] font-black text-sm">
+                          <div className="w-7 h-7 bg-amber-500/10 text-amber-500 rounded-lg flex items-center justify-center"><FiZap /></div>
+                          +500 XP
+                        </div>
+                        <div className="flex items-center gap-3 text-[var(--text-main)] font-black text-sm">
+                          <div className="w-7 h-7 bg-indigo-500/10 text-[var(--primary)] rounded-lg flex items-center justify-center"><FiAward /></div>
+                          Master Badge
+                        </div>
+                      </div>
+                    </div>
+
+                    {activeLevel === (activeDomainProgress.currentPhase ?? 0) && (
+                      <button
+                        onClick={handleSkipLevel}
+                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[var(--bg-card)] hover:bg-[var(--bg-sub)] border-2 border-[var(--border)] text-[var(--text-main)] font-black text-xs tracking-wider uppercase transition duration-300 shadow-sm w-full"
+                      >
+                        ⏭️ Skip Whole Level
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {activeLevel === (activeDomainProgress.currentPhase ?? 0) && (
-                  <button
-                    onClick={handleSkipLevel}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-sub)] hover:bg-[var(--border)] text-[var(--text-main)] font-black text-[9px] tracking-wider uppercase transition duration-300"
-                  >
-                    ⏭️ Skip
-                  </button>
-                )}
+                {/* Right Side: Topics List */}
+                <div className="flex flex-col">
+                  {isDSA && (
+                    <div className="flex items-center gap-3 mb-6 p-1.5 bg-[var(--bg-sub)] rounded-xl border border-[var(--border)] w-max">
+                      <button 
+                        onClick={() => setDsaInstructor('striver')}
+                        className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${dsaInstructor === 'striver' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+                      >
+                        Striver (A2Z)
+                      </button>
+                      <button 
+                        onClick={() => setDsaInstructor('babbar')}
+                        className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${dsaInstructor === 'babbar' ? 'bg-orange-500 text-white shadow-md' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+                      >
+                        Love Babbar
+                      </button>
+                    </div>
+                  )}
+                  <TopicsList 
+                    phaseId={activePhase?._id} 
+                    isTopicCompleted={isTopicCompleted}
+                    activeLevel={activeLevel}
+                    isDSA={isDSA}
+                    dsaInstructor={dsaInstructor}
+                  />
+                </div>
               </div>
-
-
-
-              <TopicsList 
-                phaseId={activePhase?._id} 
-                isTopicCompleted={isTopicCompleted}
-                activeLevel={activeLevel}
-                isDSA={isDSA}
-              />
             </motion.div>
           )}
         </>
@@ -1002,7 +1046,7 @@ const Roadmap = () => {
   );
 };
 
-const TopicsList = ({ phaseId, isTopicCompleted, activeLevel, isDSA }) => {
+const TopicsList = ({ phaseId, isTopicCompleted, activeLevel, isDSA, dsaInstructor }) => {
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -1024,9 +1068,15 @@ const TopicsList = ({ phaseId, isTopicCompleted, activeLevel, isDSA }) => {
     </div>
   );
 
+  const filteredTopics = isDSA && dsaInstructor 
+    ? topics.filter(t => dsaInstructor === 'babbar' ? t.instructor === 'Love Babbar' : t.instructor !== 'Love Babbar') 
+    : topics;
+
+  if (filteredTopics.length === 0) return <div className="text-center py-10 text-[var(--text-light)] italic">No missions found for this instructor in this level.</div>;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-      {topics.map((topic, i) => {
+      {filteredTopics.map((topic, i) => {
         const completed = isTopicCompleted(topic._id);
         
         return (

@@ -2073,7 +2073,7 @@ export const getCheckpointContent = (checkpointId, lang = 'cpp', dsaCourse = 'de
     if ((dsaCourse === 'default' || dsaCourse === 'love-babbar') && (lang === 'cpp' || lang === 'c++')) {
       const babbarVideoId = babbarCheckpointVideos[checkpointId];
       if (babbarVideoId) {
-        content.videoEmbedUrl = `https://www.youtube.com/embed/${babbarVideoId}?rel=0&modestbranding=1`;
+        content.videoEmbedUrl = `https://www.youtube.com/embed/${babbarVideoId}?list=PLDzeHZWIZsTryvtXdMr6rPh4IDexB5NIA&rel=0&modestbranding=1`;
       }
     }
     return content;
@@ -2096,7 +2096,7 @@ export const getCheckpointContent = (checkpointId, lang = 'cpp', dsaCourse = 'de
     cp1: {
       title: 'Intro to Programming',
       subtitle: 'Your first program â€” syntax, output, and the Hello World ritual.',
-      videoEmbedUrl: 'https://www.youtube.com/embed/EAR7De6Goz4?start=4&rel=0&modestbranding=1',
+      videoEmbedUrl: 'https://www.youtube.com/embed/EAR7De6Goz4?list=PLgUwDviBIf0oF6QL8m22w1hIDC1vJ_BHz&start=4&rel=0&modestbranding=1',
       challenges: {
         cpp: {
           title: 'Print Your Name',
@@ -2378,7 +2378,7 @@ export const getCheckpointContent = (checkpointId, lang = 'cpp', dsaCourse = 'de
   if ((dsaCourse === 'default' || dsaCourse === 'love-babbar') && (lang === 'cpp' || lang === 'c++')) {
     const babbarVideoId = babbarCheckpointVideos[checkpointId];
     if (babbarVideoId) {
-      videoEmbedUrl = `https://www.youtube.com/embed/${babbarVideoId}?rel=0&modestbranding=1`;
+      videoEmbedUrl = `https://www.youtube.com/embed/${babbarVideoId}?list=PLDzeHZWIZsTryvtXdMr6rPh4IDexB5NIA&rel=0&modestbranding=1`;
     }
   }
 

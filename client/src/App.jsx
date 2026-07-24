@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
 
 // Layouts
@@ -38,11 +38,43 @@ import ManageSubmissions from './pages/admin/ManageSubmissions';
 import ManageTestCases from './pages/admin/ManageTestCases';
 import ManageTopics from './pages/admin/ManageTopics';
 import InstallPrompt from './components/InstallPrompt';
+import { registerDevice, startSession, endSession } from './utils/analyticsTracker';
+
+// Analytics Bootstrap component
+const AnalyticsBootstrap = () => {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // Initial device registration and session starting
+    registerDevice();
+    startSession();
+
+    const handleBeforeUnload = () => {
+      endSession();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      endSession();
+    };
+  }, []);
+
+  // Sync user changes (login/logout) to analytics
+  useEffect(() => {
+    registerDevice();
+    startSession();
+  }, [user]);
+
+  return null;
+};
 
 function App() {
   return (
     <AuthProvider>
       <Router>
+        <AnalyticsBootstrap />
         <Toaster position="top-right" toastOptions={{ className: 'premium-toast', style: { background: '#ffffff', color: '#101828', border: '1px solid #eaecf0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(16, 24, 40, 0.1)' } }} />
         <InstallPrompt />
         <Routes>

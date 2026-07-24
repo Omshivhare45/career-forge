@@ -23,6 +23,7 @@ import {
   FiStar
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import PlatformAnalytics from './PlatformAnalytics';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -31,8 +32,9 @@ const AdminDashboard = () => {
   const [topics, setTopics] = useState([]);
   const [assessments, setAssessments] = useState([]);
   
-  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'domains' | 'topics' | 'assessments' | 'feedback'
+  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'domains' | 'topics' | 'assessments' | 'feedback' | 'analytics'
   const [loading, setLoading] = useState(true);
+  const [selectedUserAnalytics, setSelectedUserAnalytics] = useState(null);
 
   // Feedback System State
   const [feedbacks, setFeedbacks] = useState([]);
@@ -168,11 +170,23 @@ const AdminDashboard = () => {
 
   const openPersonalizeDrawer = (user) => {
     setSelectedUser(user);
+    setSelectedUserAnalytics(null);
     const key = getProgressKey(user.activeDomain?.slug || user.selectedDomain?.slug);
     const activeProg = user.domainsProgress?.[key] || {};
     setCustomXp(activeProg.xp || 0);
     setCustomProgress(activeProg.overallProgress || 0);
     setCustomPhase(activeProg.currentPhase || 0);
+
+    // Fetch user device installation and session analytics asynchronously
+    api.get(`/admin/analytics/users/${user._id}`)
+      .then(res => {
+        if (res.data.success) {
+          setSelectedUserAnalytics(res.data.data);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load user analytics metrics:', err);
+      });
   };
 
   const handleSaveProgress = async () => {
@@ -464,6 +478,12 @@ const AdminDashboard = () => {
               >
                 ⭐ User Feedback
               </button>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${activeTab === 'analytics' ? 'bg-emerald-600 dark:bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
+              >
+                📊 Platform Analytics
+              </button>
             </div>
             <Link
               to="/dashboard"
@@ -510,6 +530,10 @@ const AdminDashboard = () => {
       </div>
 
       {/* Tabs panels */}
+      {activeTab === 'analytics' && (
+        <PlatformAnalytics />
+      )}
+
       {activeTab === 'users' && (
         <div className="admin-panel bg-white dark:bg-slate-900/40 border border-slate-150 dark:border-white/5 rounded-3xl p-6 shadow-md dark:shadow-xl space-y-6">
           {/* Controls toolbar */}
@@ -1192,9 +1216,39 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <p className="text-slate-500 text-xs italic">User has not completed the interest onboarding profile.</p>
                 )}
+
+                {/* User Analytics Section */}
+                <div className="space-y-4 border-t border-slate-100 dark:border-white/5 pt-4">
+                  <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Device & Session Analytics</h4>
+                  {!selectedUserAnalytics ? (
+                    <div className="text-slate-450 text-xs py-2 flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-indigo-500/30 border-t-indigo-500 animate-spin"></div>
+                      <span>Loading device telemetry...</span>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-white/5 text-xs space-y-2">
+                      <div className="flex justify-between"><span className="text-slate-500">Installation Date:</span><span className="text-slate-800 dark:text-white font-bold">{selectedUserAnalytics.installationDate ? new Date(selectedUserAnalytics.installationDate).toLocaleDateString() : 'N/A'}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Registration Date:</span><span className="text-slate-800 dark:text-white font-bold">{new Date(selectedUserAnalytics.registrationDate).toLocaleDateString()}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Last Login:</span><span className="text-slate-800 dark:text-white font-bold">{selectedUserAnalytics.lastLogin ? new Date(selectedUserAnalytics.lastLogin).toLocaleString() : 'N/A'}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Last Active:</span><span className="text-slate-800 dark:text-white font-bold">{selectedUserAnalytics.lastActive ? new Date(selectedUserAnalytics.lastActive).toLocaleString() : 'N/A'}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Total Sessions:</span><span className="text-slate-800 dark:text-white font-bold">{selectedUserAnalytics.totalSessions || 0} sessions</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Time Spent:</span><span className="text-slate-800 dark:text-white font-bold">{(() => {
+                        const sec = selectedUserAnalytics.totalTimeSpent;
+                        if (!sec || isNaN(sec)) return '0s';
+                        const hrs = Math.floor(sec / 3600);
+                        const mins = Math.floor((sec % 3600) / 60);
+                        const secs = sec % 60;
+                        if (hrs > 0) return `${hrs}h ${mins}m`;
+                        if (mins > 0) return `${mins}m ${secs}s`;
+                        return `${secs}s`;
+                      })()}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Devices Tracked:</span><span className="text-slate-800 dark:text-white font-bold">{selectedUserAnalytics.deviceCount || 1} device(s)</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">App Version:</span><span className="text-emerald-700 dark:text-indigo-400 font-bold">v{selectedUserAnalytics.appVersion}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Roadmap Level:</span><span className="text-amber-600 dark:text-amber-400 font-black">Level {selectedUserAnalytics.currentRoadmapLevel}</span></div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -71,6 +71,16 @@ async function seedDSA() {
     console.log('🗑️  Cleared existing DSA data');
 
     const topicData = require('./topicData');
+    const dsaLoveBabbar = require('./dsaLoveBabbar');
+    
+    // Append Love Babbar topics instead of overwriting
+    for (const key in dsaLoveBabbar) {
+      if (topicData[key]) {
+        topicData[key] = [...topicData[key], ...dsaLoveBabbar[key]];
+      } else {
+        topicData[key] = dsaLoveBabbar[key];
+      }
+    }
 
     for (const phaseInfo of phases) {
       const phase = await Phase.create({
@@ -82,21 +92,23 @@ async function seedDSA() {
       // Add topics for this phase and their individual badges
       const topicKey = `dsa:${phase.phaseNumber}`;
       const topics = topicData[topicKey] || [];
+      let orderIndex = 1;
       for (const topicInfo of topics) {
-        const topic = await Topic.create({ ...topicInfo, phaseId: phase._id, domainId: domain._id });
+        const topic = await Topic.create({ ...topicInfo, phaseId: phase._id, domainId: domain._id, order: orderIndex });
         
         // One video = One badge
         await Badge.create({
           name: `${topic.title} Badge`,
-          description: `Mastered the "${topic.title}" topic from Love Babbar's course!`,
+          description: `Mastered the "${topic.title}" topic!`,
           icon: '📜',
           domainId: domain._id,
           phaseId: phase._id,
           topicId: topic._id,
           type: 'topic-completion',
           unlockCondition: `Complete the ${topic.title} video and challenge`,
-          order: topic.order
+          order: orderIndex
         });
+        orderIndex++;
       }
 
       // Add assessment

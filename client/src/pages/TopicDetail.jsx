@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +11,8 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import Editor from '@monaco-editor/react';
+import CodeEditor from '../components/CodeEditor';
+import BadgeVisual, { getBadgeMetadata } from '../components/BadgeVisual';
 import { getDsaLanguageContent, getCheckpointContent } from '../utils/dsaContent';
 import { getWebDevLanguageContent, getWebDevCheckpointContent } from '../utils/webDevContent';
 import { getLessonAssessment, normalizeDsaLanguage } from '../utils/dsaPersonalization';
@@ -54,18 +55,41 @@ const playSoundEffect = (type) => {
 // Helper to extract embedded URL supporting both video IDs and playlists dynamically
 const getYouTubeEmbedUrl = (url) => {
   if (!url || typeof url !== 'string') return null;
-  if (url.includes('playlist?list=') || url.includes('&list=')) {
-    const match = url.match(/[?&]list=([^#\&\?]+)/);
-    if (match && match[1]) {
-      return `https://www.youtube.com/embed/videoseries?list=${match[1]}`;
-    }
+  
+  const videoRegExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const videoMatch = url.match(videoRegExp);
+  const videoId = (videoMatch && videoMatch[2] && videoMatch[2].length === 11) ? videoMatch[2] : null;
+
+  const listMatch = url.match(/[?&]list=([^#\&\?]+)/);
+  const listId = (listMatch && listMatch[1]) ? listMatch[1] : null;
+
+  if (videoId && listId) {
+    return `https://www.youtube.com/embed/${videoId}?list=${listId}&rel=0&modestbranding=1&showinfo=0`;
+  } else if (videoId) {
+    return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&showinfo=0`;
+  } else if (listId) {
+    return `https://www.youtube.com/embed/videoseries?list=${listId}`;
   }
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-  const match = url.match(regExp);
-  if (match && match[2] && match[2].length === 11) {
-    return `https://www.youtube.com/embed/${match[2]}?rel=0&modestbranding=1&showinfo=0`;
-  }
+  
   return null;
+};
+
+// Helper to safely append enablejsapi and origin parameters to avoid postMessage origin mismatch errors
+const appendYTParams = (url) => {
+  if (!url || typeof url !== 'string') return "";
+  try {
+    let updatedUrl = url;
+    if (!updatedUrl.includes('enablejsapi=1')) {
+      const separator = updatedUrl.includes('?') ? '&' : '?';
+      updatedUrl = `${updatedUrl}${separator}enablejsapi=1&autoplay=1`;
+    }
+    if (!updatedUrl.includes('origin=') && typeof window !== 'undefined') {
+      updatedUrl = `${updatedUrl}&origin=${window.location.origin}`;
+    }
+    return updatedUrl;
+  } catch (e) {
+    return url;
+  }
 };
 
 const TopicDetail = () => {
@@ -108,6 +132,7 @@ const TopicDetail = () => {
   const [isCpSidebarOpen, setIsCpSidebarOpen] = useState(false);
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('learn');
   const [isMobile, setIsMobile] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -153,7 +178,7 @@ const TopicDetail = () => {
   // Custom Dynamic Languages & Tracks State
   const [selectedLang, setSelectedLang] = useState(() => normalizeDsaLanguage(localStorage.getItem('dsa_lang') || 'cpp'));
   const [useStriverAdvanced, setUseStriverAdvanced] = useState(() => localStorage.getItem('striver_advanced') === 'true');
-  const [dsaCourse, setDsaCourse] = useState(() => localStorage.getItem('dsa_course') || 'default');
+  const dsaCourse = topic?.instructor === 'Love Babbar' ? 'default' : 'striver';
   
   const langDisplayMap = { cpp: 'C++', java: 'Java', python: 'Python', javascript: 'JavaScript' };
   const currentLangName = langDisplayMap[selectedLang] || 'C++';
@@ -289,7 +314,7 @@ const TopicDetail = () => {
   }, [id, activeDifficulty]);
 
   // Advanced Layout Resizer & Fullscreen Editor States
-  const [leftWidth, setLeftWidth] = useState(45); // percentage width for left details pane
+  const [leftWidth, setLeftWidth] = useState(60); // percentage width for left details pane
   const [isDragging, setIsDragging] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -316,6 +341,7 @@ const TopicDetail = () => {
   // Window mouse resize dragging event listeners
   const startResize = (e) => {
     setIsDragging(true);
+    document.body.classList.add('workspace-dragging');
     e.preventDefault();
   };
 
@@ -334,6 +360,7 @@ const TopicDetail = () => {
 
     const handleMouseUp = () => {
       setIsDragging(false);
+      document.body.classList.remove('workspace-dragging');
     };
 
     if (isDragging) {
@@ -380,9 +407,7 @@ const TopicDetail = () => {
     localStorage.setItem('striver_advanced', useStriverAdvanced.toString());
   }, [useStriverAdvanced]);
 
-  useEffect(() => {
-    localStorage.setItem('dsa_course', dsaCourse);
-  }, [dsaCourse]);
+
 
   // Load topic & dependencies
   useEffect(() => {
@@ -1190,7 +1215,7 @@ const TopicDetail = () => {
       `⚙️ Executing standard check assertions...`
     ]);
 
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       try {
         const { results, logs } = executeSandbox(editorCode, selectedLang, langContent.testCases);
         setTestResults(results);
@@ -1204,12 +1229,12 @@ const TopicDetail = () => {
           toast.success("All test cases passed! Ready to submit! 🏆", { icon: '✨' });
         } else {
           setCompilerStatus('failed');
-          setChallengePassed(false); // Strictly reset
+          setChallengePassed(false);
           playSoundEffect('error');
           toast.error("Some test cases failed. Keep refining your logic!");
         }
       } catch (err) {
-        setChallengePassed(false); // Strictly reset
+        setChallengePassed(false);
         if (err.message.includes("Compilation Error")) {
           setCompilerStatus('compile_error');
         } else {
@@ -1219,7 +1244,7 @@ const TopicDetail = () => {
         playSoundEffect('error');
         toast.error("Compilation / Execution Failed!");
       }
-    }, 1200);
+    });
   };
 
   const getRank = (xp) => {
@@ -1521,18 +1546,7 @@ const TopicDetail = () => {
     };
 
     return (
-      <div className="flex h-[calc(100vh-64px)] w-full overflow-hidden bg-[var(--bg-main)] relative">
-        {isDragging && (
-          <style>{`
-            iframe {
-              pointer-events: none !important;
-            }
-            body {
-              user-select: none !important;
-              -webkit-user-select: none !important;
-            }
-          `}</style>
-        )}
+      <div className={`flex h-full w-full overflow-hidden bg-[var(--bg-main)] relative ${isDragging ? 'workspace-dragging' : ''}`}>
 
         {/* Backdrop overlay for Checkpoint sidebar on mobile */}
         {isMobile && isCpSidebarOpen && (
@@ -1543,40 +1557,39 @@ const TopicDetail = () => {
         )}
 
         {/* ── CHECKPOINT SIDEBAR ────────────────────────────────────────────── */}
-        <div className={`bg-[var(--bg-card)] border-r border-[var(--border)] flex flex-col h-full overflow-hidden transition-transform duration-300 ease-in-out shrink-0
+        <div className={`bg-[var(--bg-card)] flex flex-col h-full overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] shrink-0
           ${isMobile 
-            ? 'absolute top-0 left-0 bottom-0 z-50 w-72 shadow-2xl' 
-            : 'w-72'
+            ? `absolute top-0 left-0 bottom-0 z-50 shadow-2xl ${isCpSidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full'}` 
+            : `${isCpSidebarOpen ? 'w-72 border-r border-[var(--border)] opacity-100' : 'w-0 opacity-0 border-r-0'}`
           }
-          ${isMobile && !isCpSidebarOpen ? '-translate-x-full' : 'translate-x-0'}
         `}>
 
-          {/* Header: gradient brand block */}
-          <div className="p-4 border-b border-[var(--border)] bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 shrink-0">
-            <Link to="/roadmap" className="flex items-center gap-1.5 text-[var(--text-main)]/60 hover:text-[var(--text-main)] text-[9px] font-black uppercase tracking-widest mb-3 transition-colors group">
-              <FiArrowLeft className="group-hover:-translate-x-0.5 transition-transform" /> Back to Roadmap
+          {/* Minimal Header */}
+          <div className="p-5 border-b border-[var(--border)] bg-[var(--bg-card)] shrink-0 transition-all duration-500">
+            <Link to="/roadmap" className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] text-[9px] font-black uppercase tracking-widest mb-4 transition-colors group">
+              <FiArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back to Roadmap
             </Link>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-[var(--bg-card)]/15 flex items-center justify-center text-xl shadow-inner">🚀</div>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-[var(--bg-sub)] flex items-center justify-center text-xl shadow-sm border border-[var(--border)]">🚀</div>
               <div>
                 <div className="text-[var(--text-main)] font-black text-sm leading-tight">{topic?.title || 'Start Coding'}</div>
-                <div className="text-[var(--text-main)]/50 text-[9px] font-bold uppercase tracking-widest mt-0.5">{topic?.difficulty ? `Level 1 · ${topic.difficulty}` : 'Level 0 · Foundations'}</div>
+                <div className="text-[var(--text-muted)] text-[9px] font-bold uppercase tracking-widest mt-1">{topic?.difficulty ? `Level 1 · ${topic.difficulty}` : 'Level 0 · Foundations'}</div>
               </div>
             </div>
             {/* Progress bar */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[var(--text-main)]/50 text-[9px] font-black uppercase tracking-wider">Your Progress</span>
-                <span className="text-[var(--text-main)] text-[9px] font-black">{completedCheckpoints.length} / {CHECKPOINTS.length} done</span>
+                <span className="text-[var(--text-muted)] text-[9px] font-black uppercase tracking-wider">Progress</span>
+                <span className="text-[var(--text-main)] text-[9px] font-black">{completedCheckpoints.length} / {CHECKPOINTS.length}</span>
               </div>
-              <div className="h-2 bg-[var(--bg-card)]/15 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-[var(--bg-sub)] rounded-full overflow-hidden border border-[var(--border)]">
                 <div
-                  className="h-full bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full transition-all duration-700 ease-out"
+                  className="h-full bg-[var(--primary)] rounded-full transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]"
                   style={{ width: `${(completedCheckpoints.length / CHECKPOINTS.length) * 100}%` }}
                 />
               </div>
               {allDone && (
-                <div className="text-[9px] font-black text-emerald-400 text-center pt-0.5">🎓 Level 0 Mastered!</div>
+                <div className="text-[9px] font-black text-emerald-500 text-center pt-0.5">🎓 Mastered!</div>
               )}
             </div>
           </div>
@@ -1600,36 +1613,7 @@ const TopicDetail = () => {
             </div>
           </div>
 
-          {/* C++ Playlist/Course Selector */}
-          {selectedLang === 'cpp' && (
-            <div className="px-4 py-2 border-b border-[var(--border)] shrink-0 bg-[var(--bg-sub)]/30">
-              <div className="text-[8px] font-black text-[var(--text-light)] uppercase tracking-wider mb-2 flex items-center gap-1">
-                <FiYoutube className="text-red-500" /> C++ DSA Playlist Course
-              </div>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setDsaCourse('default')}
-                  className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
-                    dsaCourse === 'default'
-                      ? 'bg-[var(--primary)] text-[var(--text-main)] shadow-sm'
-                      : 'bg-[var(--bg-sub)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                  }`}
-                >
-                  Love Babbar
-                </button>
-                <button
-                  onClick={() => setDsaCourse('striver')}
-                  className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
-                    dsaCourse === 'striver'
-                      ? 'bg-[var(--primary)] text-[var(--text-main)] shadow-sm'
-                      : 'bg-[var(--bg-sub)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                  }`}
-                >
-                  Striver A2Z
-                </button>
-              </div>
-            </div>
-          )}
+
 
           {/* Checkpoint navigation list */}
           <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
@@ -1637,7 +1621,7 @@ const TopicDetail = () => {
             {CHECKPOINTS.map((cpId, idx) => {
               const isActive = activeCheckpoint === cpId;
               const isDone = completedCheckpoints.includes(cpId);
-              const isLocked = idx > 0 && !completedCheckpoints.includes(CHECKPOINTS[idx - 1]);
+              const isLocked = false;
               const cpLabel = CHECKPOINT_LABELS[cpId];
               const cpIcon = CHECKPOINT_ICONS[cpId];
 
@@ -1686,8 +1670,8 @@ const TopicDetail = () => {
                     }`}>
                       {cpLabel}
                     </div>
-                    <div className="text-[9px] text-[var(--text-muted)] font-semibold mt-0.5">
-                      {isDone ? '✅ Completed' : isActive ? '▶ In progress' : isLocked ? '🔒 Locked' : `Watch · Code · Unlock`}
+                    <div className="text-[9px] text-[var(--text-muted)] font-semibold mt-0.5 transition-colors">
+                      {isDone ? '✅ Completed' : isActive ? '▶ In progress' : `Watch & Code`}
                     </div>
                   </div>
 
@@ -1774,43 +1758,39 @@ const TopicDetail = () => {
             </div>
           )}
 
-          <div id="workspace-split-container" className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden">
+          <div id="workspace-split-container" className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden relative">
+
+            {/* Sidebar Toggle Button */}
+            <button
+              onClick={() => setIsCpSidebarOpen(!isCpSidebarOpen)}
+              className="hidden lg:flex absolute left-4 top-3.5 z-50 bg-[var(--bg-card)]/90 backdrop-blur border border-[var(--border)] p-2 rounded-xl text-[var(--text-main)] shadow-sm hover:bg-[var(--bg-sub)] transition-all hover:scale-105"
+              title={isCpSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+            >
+              {isCpSidebarOpen ? <FiMinimize2 size={16} /> : <FiList size={16} />}
+            </button>
 
             {/* LEFT: Video + Problem */}
             <div 
               style={{ width: isMobile ? '100%' : `${leftWidth}%` }} 
-              className={`h-full flex flex-col border-r border-[var(--border)] bg-[var(--bg-card)] overflow-hidden shrink-0
+              className={`h-full flex flex-col border-r border-[var(--border)] bg-[var(--bg-main)] overflow-hidden shrink-0
                 ${isMobile && activeWorkspaceTab !== 'learn' ? 'hidden' : 'flex'}
               `}
             >
 
             {/* Checkpoint header bar */}
-            <div className="bg-[var(--bg-sub)] border-b border-[var(--border)] px-5 py-3 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="text-xl">{CHECKPOINT_ICONS[activeCheckpoint]}</div>
+            <div className="bg-[var(--bg-main)] border-b border-[var(--border)] pl-16 pr-5 py-3 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
                 <div>
-                  <div className="text-[9px] font-black text-[var(--text-light)] uppercase tracking-widest">
-                    Checkpoint {currentCpIndex + 1} of {CHECKPOINTS.length}
-                  </div>
                   <div className="text-sm font-black text-[var(--text-main)] leading-tight">{CHECKPOINT_LABELS[activeCheckpoint]}</div>
                   {cpContent?.subtitle && (
-                    <div className="text-[9px] text-[var(--text-muted)] font-semibold mt-0.5">{cpContent.subtitle}</div>
+                    <div className="text-[10px] text-[var(--text-muted)] font-medium mt-0.5">{cpContent.subtitle}</div>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {isLastCp ? (
-                  <div className="px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-[var(--text-main)] rounded-lg text-[9px] font-black shadow tracking-wider flex items-center gap-1.5">
-                    <FiZap size={10} /> Final Challenge
-                  </div>
-                ) : (
-                  <div className="px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-[var(--text-main)] rounded-lg text-[9px] font-black shadow tracking-wider flex items-center gap-1.5">
-                    <FiYoutube size={10} /> Watch &amp; Code
-                  </div>
-                )}
                 {completedCheckpoints.includes(activeCheckpoint) && (
-                  <div className="px-2.5 py-1 bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 rounded-lg text-[9px] font-black">
-                    ✅ Done
+                  <div className="px-2.5 py-1 text-emerald-500 rounded-lg text-[10px] font-bold flex items-center gap-1.5">
+                    <FiCheckCircle size={12} /> Completed
                   </div>
                 )}
               </div>
@@ -1819,23 +1799,15 @@ const TopicDetail = () => {
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
 
-              {/* VIDEO SECTION — every checkpoint has its own unique video */}
+              {/* VIDEO SECTION */}
               {cpVideoUrl && (
-                <div className="p-5 space-y-3 border-b border-[var(--border)]">
-                  <div className="flex items-center gap-2">
-                    <FiYoutube className="text-red-500 text-base" />
-                    <div>
-                      <span className="text-xs font-black text-[var(--text-main)]">Tutorial Video</span>
-                      <span className="ml-2 text-[9px] text-[var(--text-muted)] font-semibold">— Unique to this checkpoint</span>
-                    </div>
-                  </div>
-
-                  <div className="aspect-video bg-black rounded-xl overflow-hidden border border-[var(--border)] shadow-lg">
+                <div className="p-5 space-y-4 border-b border-[var(--border)]">
+                  <div className="aspect-video bg-[var(--bg-sub)] rounded-xl overflow-hidden border border-[var(--border)] shadow-sm">
                     <iframe
                       key={`video-${activeCheckpoint}-${selectedLang}`}
                       id={`checkpoint-video-${activeCheckpoint}`}
                       className="w-full h-full"
-                      src={cpVideoUrl}
+                      src={cpVideoUrl ? appendYTParams(cpVideoUrl) : ""}
                       title={`${CHECKPOINT_LABELS[activeCheckpoint]} Tutorial`}
                       frameBorder="0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -1844,26 +1816,18 @@ const TopicDetail = () => {
                   </div>
 
                   {/* Post-video state indicator */}
-                  {!checkpointVideoFinished ? (
-                    <div className="flex items-center justify-between bg-[var(--bg-sub)] rounded-lg px-3 py-2 border border-[var(--border)]">
-                      <span className="text-[10px] text-[var(--text-muted)] font-semibold italic">
-                        👆 Watch the video, then try the challenge below →
+                  {!checkpointVideoFinished && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-[var(--text-muted)] font-medium">
+                        Watch the tutorial, then complete the challenge.
                       </span>
                       <button
                         type="button"
                         onClick={() => { setCheckpointVideoFinished(true); toast.success('Video done! Now try it yourself 🚀'); }}
-                        className="text-[9px] text-[var(--primary)] hover:text-[var(--primary-dark)] font-black uppercase tracking-wider cursor-pointer border-none bg-transparent ml-3 whitespace-nowrap"
+                        className="text-[10px] bg-[var(--bg-sub)] border border-[var(--border)] text-[var(--text-main)] hover:bg-[var(--border)] font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap"
                       >
-                        ⚡ Mark Done
+                        Mark Video Done
                       </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2.5">
-                      <span className="text-emerald-500 text-base">✅</span>
-                      <div>
-                        <div className="text-[10px] font-black text-emerald-500">Video Complete!</div>
-                        <div className="text-[9px] text-[var(--text-muted)] font-semibold">Now try it yourself — solve the challenge on the right! 💪</div>
-                      </div>
                     </div>
                   )}
                 </div>
@@ -2081,23 +2045,17 @@ const TopicDetail = () => {
             ) : (
             <>
             {/* Monaco Editor */}
-            <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-              <Editor
-                height="100%"
+            <div className="flex-1 overflow-hidden min-h-[400px] w-full relative" style={{ minHeight: '400px' }}>
+              <CodeEditor
                 language={selectedLang === 'js' ? 'javascript' : selectedLang}
                 value={editorCode || (cpContent?.editorBoilerplate || '')}
                 theme={editorTheme}
                 onChange={(val) => setEditorCode(val || '')}
                 options={{
                   fontSize: 13,
-                  minimap: { enabled: false },
-                  scrollBeyondLastLine: false,
-                  lineNumbers: 'on',
-                  automaticLayout: true,
                   tabSize: 4,
                   wordWrap: 'on',
-                  padding: { top: 16 },
-                  fontLigatures: true
+                  padding: { top: 16 }
                 }}
               />
             </div>
@@ -2282,18 +2240,7 @@ const TopicDetail = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] w-full overflow-hidden bg-[var(--bg-main)] transition-colors duration-300 relative select-none">
-      {isDragging && (
-        <style>{`
-          iframe {
-            pointer-events: none !important;
-          }
-          body {
-            user-select: none !important;
-            -webkit-user-select: none !important;
-          }
-        `}</style>
-      )}
+    <div className={`flex flex-col lg:flex-row h-full w-full overflow-hidden bg-[var(--bg-main)] transition-colors duration-300 relative select-none ${isDragging ? 'workspace-dragging' : ''}`}>
       
       {/* Background Confetti Elements */}
 
@@ -2327,8 +2274,12 @@ const TopicDetail = () => {
       )}
 
       {/* LEFT SIDEBAR: Roadmap Navigator */}
-      <div className="w-80 flex-shrink-0 bg-[var(--bg-card)] border-r border-[var(--border)] hidden lg:flex flex-col h-full overflow-y-auto custom-scrollbar transition-colors">
-        <div className="p-5 flex-1">
+      <div 
+        className={`flex-shrink-0 bg-[var(--bg-card)] hidden lg:flex flex-col h-full overflow-y-auto custom-scrollbar transition-all duration-300 ease-in-out ${
+          isSidebarOpen ? 'w-80 border-r border-[var(--border)] opacity-100' : 'w-0 opacity-0 overflow-hidden'
+        }`}
+      >
+        <div className="w-80 p-5 flex-1">
           <Link to="/roadmap" className="flex items-center gap-2 text-[var(--text-light)] font-black text-[9px] uppercase tracking-widest mb-6 hover:text-[var(--primary)] transition-colors group">
             <FiArrowLeft className="group-hover:-translate-x-0.5 transition-transform" /> BACK TO MAP
           </Link>
@@ -2384,8 +2335,17 @@ const TopicDetail = () => {
       </div>
 
       {/* DUAL-PANE Split Workspace Content */}
-      <div id="workspace-split-container" className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden">
+      <div id="workspace-split-container" className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden relative">
         
+        {/* Sidebar Toggle Button */}
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="hidden lg:flex absolute left-4 top-4 z-50 bg-[var(--bg-card)]/90 backdrop-blur border border-[var(--border)] p-2.5 rounded-xl text-[var(--text-main)] shadow-lg hover:bg-[var(--bg-sub)] transition-all hover:scale-105"
+          title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+        >
+          {isSidebarOpen ? <FiMinimize2 size={16} /> : <FiList size={16} />}
+        </button>
+
         {/* Mobile View Tab Switcher for non-checkpoint modules */}
         {isMobile && shouldSplitWorkspace && (
           <div className="flex p-2 bg-[#141416] border-b border-[var(--border)] shrink-0 gap-2">
@@ -2425,7 +2385,7 @@ const TopicDetail = () => {
                 <div className="aspect-video bg-black rounded-xl overflow-hidden border border-[var(--border)] shadow-lg mb-6 max-w-4xl mx-auto w-full">
                   <iframe
                     id="tutorial-video-iframe"
-                    src={activeVideoEmbedUrl ? activeVideoEmbedUrl + (activeVideoEmbedUrl.includes('?') ? '&' : '?') + "enablejsapi=1" : "https://www.youtube.com/embed/EAR7De6Goz4"}
+                    src={appendYTParams(activeVideoEmbedUrl || "https://www.youtube.com/embed/EAR7De6Goz4?list=PLgUwDviBIf0oF6QL8m22w1hIDC1vJ_BHz")}
                     className="w-full h-full"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -2531,7 +2491,7 @@ const TopicDetail = () => {
           ) : (
             <>
 {/* Tabs / Stepper Bar Header */}
-          {learningStep !== 1 && learningStep !== 'transition' && (
+          {dsaCourse !== 'default' && learningStep !== 1 && learningStep !== 'transition' && (
             <div className="bg-[var(--bg-sub)] border-b border-[var(--border)] px-4 py-2 flex flex-col shrink-0 gap-2">
               {/* Top Stepper Bar */}
               <div className="flex items-center justify-between gap-2">
@@ -2611,17 +2571,146 @@ const TopicDetail = () => {
           )}
 
           {/* Left Pane Scrollable Content */}
-          {learningStep === 1 ? (
-            <div className="flex-1 flex flex-col bg-black relative w-full h-full">
-              <iframe
-                id="tutorial-video-iframe"
-                src={activeVideoEmbedUrl ? `${activeVideoEmbedUrl}${activeVideoEmbedUrl.includes('?') ? '&' : '?'}enablejsapi=1` : "https://www.youtube.com/embed/EAR7De6Goz4"}
-                className="w-full flex-1"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-              <div className="p-4 bg-[#18181b] border-t border-[#2e2e2e] flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+          {dsaCourse === 'default' ? (
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-[var(--bg-main)]">
+              {/* VIDEO SECTION */}
+              {langContent?.youtubeVideoId && (
+                <div className="p-5 space-y-4 border-b border-[var(--border)]">
+                  <div className="aspect-video bg-[var(--bg-sub)] rounded-xl overflow-hidden border border-[var(--border)] shadow-sm">
+                    <iframe
+                      className="w-full h-full"
+                      src={appendYTParams(`https://www.youtube.com/embed/${langContent.youtubeVideoId}?rel=0&modestbranding=1&showinfo=0`)}
+                      title={topic?.title || "Video Tutorial"}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                  
+                  {!isVideoFinished && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-[var(--text-muted)] font-medium">
+                        Watch the tutorial, then complete the challenge.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => { setIsVideoFinished(true); toast.success('Video done! Now try it yourself 🚀'); }}
+                        className="text-[10px] bg-[var(--bg-sub)] border border-[var(--border)] text-[var(--text-main)] hover:bg-[var(--border)] font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap"
+                      >
+                        Mark Video Done
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* CHALLENGE SECTION */}
+              <div className="p-5 space-y-4">
+                {isVideoFinished && (
+                  <div className="p-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl space-y-1">
+                    <div className="text-sm font-black text-[var(--text-main)] flex items-center gap-2">
+                      <span>💡</span> Now try this yourself!
+                    </div>
+                    <p className="text-[10px] text-[var(--text-muted)] font-semibold leading-relaxed">
+                      You just watched the concept. Now it's your turn to write the code. Read the problem, think through the logic, and hit Run Code on the right.
+                    </p>
+                  </div>
+                )}
+
+                {topic?.title && (
+                  <div className="flex items-center gap-2">
+                    <FiCode className="text-[var(--primary)] text-sm" />
+                    <span className="text-sm font-black text-[var(--text-main)]">{topic.title}</span>
+                  </div>
+                )}
+
+                <div className="p-4 bg-[var(--bg-sub)] rounded-xl border border-[var(--border)] space-y-2">
+                  <div className="text-[9px] font-black text-[var(--text-light)] uppercase tracking-wider">Problem</div>
+                  <p className="text-xs text-[var(--text-muted)] font-semibold leading-relaxed whitespace-pre-line">
+                    {langContent?.challengeDescription || topic?.description}
+                  </p>
+                </div>
+
+                {langContent?.constraints && langContent.constraints !== 'None' && langContent.constraints !== 'None — just return the exact string.' && (
+                  <div className="p-3 bg-[var(--bg-sub)] rounded-xl border border-[var(--border)]">
+                    <div className="text-[9px] font-black text-[var(--text-light)] uppercase tracking-wider mb-1">Constraints</div>
+                    <div className="font-mono text-[10px] text-[var(--text-main)]">{langContent.constraints}</div>
+                  </div>
+                )}
+
+                {langContent?.testCases?.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-black text-[var(--text-main)] flex items-center gap-1.5">
+                      📋 Sample Test Cases
+                    </div>
+                    {langContent.testCases.slice(0, 2).map((tc, tidx) => (
+                      <div key={tidx} className="p-3 bg-[var(--bg-sub)] rounded-lg border border-[var(--border)] font-mono text-[10px] flex items-center gap-3">
+                        <div className="text-[var(--text-muted)]">
+                          Input: <span className="text-[var(--text-main)] font-black">{tc.input || '(no input)'}</span>
+                        </div>
+                        <div className="text-[var(--text-light)]">→</div>
+                        <div className="text-[var(--text-muted)]">
+                          Expected: <span className="text-emerald-400 font-black">{tc.expected}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {langContent?.hints?.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-black text-[var(--text-main)]">💡 Hints (open if stuck)</div>
+                    {langContent.hints.map((hint, hidx) => (
+                      <details key={hidx} className="group border border-[var(--border)] bg-[var(--bg-sub)] rounded-lg px-3 py-2 cursor-pointer">
+                        <summary className="text-[10px] font-bold text-[var(--text-main)] flex items-center justify-between select-none">
+                          <span>Hint {hidx + 1}</span>
+                          <span className="text-[var(--text-light)] group-open:rotate-180 transition-transform text-xs">▼</span>
+                        </summary>
+                        <p className="mt-2 text-[10px] text-[var(--text-muted)] font-semibold leading-relaxed">{hint}</p>
+                      </details>
+                    ))}
+                  </div>
+                )}
+
+                {/* Complete Topic button */}
+                <button
+                  onClick={(e) => {
+                    if (!isVideoFinished) {
+                      toast.error('Watch the video first! Click "Mark Done" when finished. 🎬');
+                      return;
+                    }
+                    handleComplete(e);
+                  }}
+                  disabled={!isVideoFinished}
+                  className={`w-full py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 mt-2 ${
+                    !isVideoFinished
+                      ? 'bg-[var(--border-light)] text-[var(--text-light)] cursor-not-allowed border border-[var(--border)]'
+                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-[var(--text-main)] shadow-lg shadow-emerald-500/25 cursor-pointer hover:scale-[1.01]'
+                  }`}
+                >
+                  {isCompleted ? (
+                    <><FiCheckCircle /> Completed!</>
+                  ) : !isVideoFinished ? (
+                    <>🔒 Watch the Video First</>
+                  ) : (
+                    <>Submit & Complete</>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : learningStep === 1 ? (
+            <div className="flex-1 flex flex-col bg-[#18181b] relative w-full h-full">
+              <div className="shrink-0 bg-black aspect-video relative border-b border-[#2e2e2e]">
+                <iframe
+                  id="tutorial-video-iframe"
+                  src={appendYTParams(activeVideoEmbedUrl || "https://www.youtube.com/embed/EAR7De6Goz4?list=PLgUwDviBIf0oF6QL8m22w1hIDC1vJ_BHz")}
+                  className="w-full h-full"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+              <div className="p-4 flex flex-col xl:flex-row xl:items-start justify-between gap-4 flex-1">
                 <div className="space-y-1">
                   <h2 className="text-white text-lg font-bold">{topic?.title || "Coding Foundations"}</h2>
                   <div className="flex items-center gap-2">
@@ -2727,7 +2816,7 @@ const TopicDetail = () => {
                 </div>
 
                     {/* Difficulty Progression Map */}
-                    {isDsaDomain && (
+                    {isDsaDomain && dsaCourse !== 'default' && (
                       <div className="bg-[var(--bg-sub)] p-4 rounded-xl border border-[var(--border)] space-y-3">
                         <div className="text-[10px] font-black text-[var(--text-light)] uppercase tracking-wider flex items-center justify-between">
                           <span>Topic Progression Ladder</span>
@@ -2773,6 +2862,25 @@ const TopicDetail = () => {
                       </div>
                     )}
 
+                    {/* Video tutorial embed card */}
+                    {langContent?.youtubeVideoId && (
+                      <div className="space-y-2 mb-4">
+                        <h3 className="text-xs font-black text-[var(--text-main)] flex items-center gap-1.5">
+                          <FiYoutube className="text-red-500" /> Dynamic Lecture Video
+                        </h3>
+                        <div className="aspect-video bg-[var(--bg-sub)] shadow-sm rounded-xl overflow-hidden border border-[var(--border)]">
+                          <iframe
+                            className="w-full h-full"
+                            src={appendYTParams(`https://www.youtube.com/embed/${langContent.youtubeVideoId}?rel=0&modestbranding=1&showinfo=0`)}
+                            title={topic.title}
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          ></iframe>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Challenge description Panel */}
                     <div className="prose dark:prose-invert max-w-none text-xs text-[var(--text-muted)] leading-relaxed font-semibold p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-sub)]">
                       <div className="text-[10px] font-black text-[var(--text-light)] uppercase tracking-wider mb-2">Problem Statement</div>
@@ -2811,24 +2919,7 @@ const TopicDetail = () => {
                       </div>
                     )}
 
-                    {/* Video tutorial embed card */}
-                    {langContent?.youtubeVideoId && (
-                      <div className="space-y-2">
-                        <h3 className="text-xs font-black text-[var(--text-main)] flex items-center gap-1.5">
-                          <FiYoutube className="text-red-500" /> Dynamic Lecture Video
-                        </h3>
-                        <div className="aspect-video bg-black shadow rounded-xl overflow-hidden border border-[var(--border)]">
-                          <iframe
-                            className="w-full h-full"
-                            src={`https://www.youtube.com/embed/${langContent.youtubeVideoId}?rel=0&modestbranding=1&showinfo=0`}
-                            title={topic.title}
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          ></iframe>
-                        </div>
-                      </div>
-                    )}
+
 
                     {/* Completion Banners */}
                     {isCompleted && nextTopic && (
@@ -3102,31 +3193,7 @@ const TopicDetail = () => {
                 ))}
               </div>
 
-              {/* C++ Playlist/Course Selector */}
-              {selectedLang === 'cpp' && (
-                <div className="flex items-center gap-1 bg-[var(--bg-sub)] p-0.5 rounded-lg border border-[var(--border)]">
-                  <button
-                    onClick={() => setDsaCourse('default')}
-                    className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all ${
-                      dsaCourse === 'default'
-                        ? 'bg-[var(--primary)] text-[var(--text-main)] shadow-sm'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                    }`}
-                  >
-                    Love Babbar
-                  </button>
-                  <button
-                    onClick={() => setDsaCourse('striver')}
-                    className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all ${
-                      dsaCourse === 'striver'
-                        ? 'bg-[var(--primary)] text-[var(--text-main)] shadow-sm'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                    }`}
-                  >
-                    Striver
-                  </button>
-                </div>
-              )}
+
             </div>
 
             <div className="flex items-center gap-2">
@@ -3161,22 +3228,15 @@ const TopicDetail = () => {
           </div>
 
           {/* Monaco Editor Container */}
-          <div className="flex-1 min-h-[250px] relative overflow-hidden bg-[#1e1e1e]">
-            <Editor
-              height="100%"
+          <div className="flex-1 min-h-[250px] w-full relative overflow-hidden bg-[#1e1e1e] editor-glow">
+            <CodeEditor
               language={selectedLang === 'js' ? 'javascript' : selectedLang}
               value={editorCode}
               beforeMount={handleEditorWillMount}
               onChange={(val) => setEditorCode(val || '')}
               theme={editorTheme}
               options={{
-                fontSize: 13,
-                fontFamily: 'Fira Code, monospace',
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                lineNumbers: 'on',
-                cursorBlinking: 'smooth',
-                automaticLayout: true
+                fontSize: 13
               }}
             />
           </div>

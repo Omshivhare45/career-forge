@@ -84,7 +84,7 @@ const appendYTParams = (url) => {
       updatedUrl = `${updatedUrl}${separator}enablejsapi=1&autoplay=1`;
     }
     if (!updatedUrl.includes('origin=') && typeof window !== 'undefined') {
-      updatedUrl = `${updatedUrl}&origin=${encodeURIComponent(window.location.origin)}`;
+      updatedUrl = `${updatedUrl}&origin=${window.location.origin}`;
     }
     return updatedUrl;
   } catch (e) {

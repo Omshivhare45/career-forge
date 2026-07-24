@@ -508,7 +508,7 @@ const TopicDetail = () => {
     return ['cpp', 'java', 'python', 'javascript'];
   }, [isWebDevDomain, topic]);
 
-  const isCheckpointModule = shouldSplitWorkspace && (dsaCourse !== 'default' && dsaCourse !== 'babbar') && (topic?.isCheckpointModule === true || (topic?.title || '').toLowerCase() === 'start coding');
+  const isCheckpointModule = shouldSplitWorkspace && (topic?.isCheckpointModule === true || (topic?.title || '').toLowerCase() === 'start coding');
 
   const langContent = useMemo(() => {
     if (isDsaDomain) {
@@ -2491,7 +2491,7 @@ const TopicDetail = () => {
           ) : (
             <>
 {/* Tabs / Stepper Bar Header */}
-          {learningStep !== 1 && learningStep !== 'transition' && (
+          {dsaCourse !== 'default' && learningStep !== 1 && learningStep !== 'transition' && (
             <div className="bg-[var(--bg-sub)] border-b border-[var(--border)] px-4 py-2 flex flex-col shrink-0 gap-2">
               {/* Top Stepper Bar */}
               <div className="flex items-center justify-between gap-2">
@@ -2571,7 +2571,134 @@ const TopicDetail = () => {
           )}
 
           {/* Left Pane Scrollable Content */}
-          {learningStep === 1 ? (
+          {dsaCourse === 'default' ? (
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-[var(--bg-main)]">
+              {/* VIDEO SECTION */}
+              {langContent?.youtubeVideoId && (
+                <div className="p-5 space-y-4 border-b border-[var(--border)]">
+                  <div className="aspect-video bg-[var(--bg-sub)] rounded-xl overflow-hidden border border-[var(--border)] shadow-sm">
+                    <iframe
+                      className="w-full h-full"
+                      src={appendYTParams(`https://www.youtube.com/embed/${langContent.youtubeVideoId}?rel=0&modestbranding=1&showinfo=0`)}
+                      title={topic?.title || "Video Tutorial"}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                  
+                  {!isVideoFinished && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-[var(--text-muted)] font-medium">
+                        Watch the tutorial, then complete the challenge.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => { setIsVideoFinished(true); toast.success('Video done! Now try it yourself 🚀'); }}
+                        className="text-[10px] bg-[var(--bg-sub)] border border-[var(--border)] text-[var(--text-main)] hover:bg-[var(--border)] font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap"
+                      >
+                        Mark Video Done
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* CHALLENGE SECTION */}
+              <div className="p-5 space-y-4">
+                {isVideoFinished && (
+                  <div className="p-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl space-y-1">
+                    <div className="text-sm font-black text-[var(--text-main)] flex items-center gap-2">
+                      <span>💡</span> Now try this yourself!
+                    </div>
+                    <p className="text-[10px] text-[var(--text-muted)] font-semibold leading-relaxed">
+                      You just watched the concept. Now it's your turn to write the code. Read the problem, think through the logic, and hit Run Code on the right.
+                    </p>
+                  </div>
+                )}
+
+                {topic?.title && (
+                  <div className="flex items-center gap-2">
+                    <FiCode className="text-[var(--primary)] text-sm" />
+                    <span className="text-sm font-black text-[var(--text-main)]">{topic.title}</span>
+                  </div>
+                )}
+
+                <div className="p-4 bg-[var(--bg-sub)] rounded-xl border border-[var(--border)] space-y-2">
+                  <div className="text-[9px] font-black text-[var(--text-light)] uppercase tracking-wider">Problem</div>
+                  <p className="text-xs text-[var(--text-muted)] font-semibold leading-relaxed whitespace-pre-line">
+                    {langContent?.challengeDescription || topic?.description}
+                  </p>
+                </div>
+
+                {langContent?.constraints && langContent.constraints !== 'None' && langContent.constraints !== 'None — just return the exact string.' && (
+                  <div className="p-3 bg-[var(--bg-sub)] rounded-xl border border-[var(--border)]">
+                    <div className="text-[9px] font-black text-[var(--text-light)] uppercase tracking-wider mb-1">Constraints</div>
+                    <div className="font-mono text-[10px] text-[var(--text-main)]">{langContent.constraints}</div>
+                  </div>
+                )}
+
+                {langContent?.testCases?.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-black text-[var(--text-main)] flex items-center gap-1.5">
+                      📋 Sample Test Cases
+                    </div>
+                    {langContent.testCases.slice(0, 2).map((tc, tidx) => (
+                      <div key={tidx} className="p-3 bg-[var(--bg-sub)] rounded-lg border border-[var(--border)] font-mono text-[10px] flex items-center gap-3">
+                        <div className="text-[var(--text-muted)]">
+                          Input: <span className="text-[var(--text-main)] font-black">{tc.input || '(no input)'}</span>
+                        </div>
+                        <div className="text-[var(--text-light)]">→</div>
+                        <div className="text-[var(--text-muted)]">
+                          Expected: <span className="text-emerald-400 font-black">{tc.expected}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {langContent?.hints?.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-black text-[var(--text-main)]">💡 Hints (open if stuck)</div>
+                    {langContent.hints.map((hint, hidx) => (
+                      <details key={hidx} className="group border border-[var(--border)] bg-[var(--bg-sub)] rounded-lg px-3 py-2 cursor-pointer">
+                        <summary className="text-[10px] font-bold text-[var(--text-main)] flex items-center justify-between select-none">
+                          <span>Hint {hidx + 1}</span>
+                          <span className="text-[var(--text-light)] group-open:rotate-180 transition-transform text-xs">▼</span>
+                        </summary>
+                        <p className="mt-2 text-[10px] text-[var(--text-muted)] font-semibold leading-relaxed">{hint}</p>
+                      </details>
+                    ))}
+                  </div>
+                )}
+
+                {/* Complete Topic button */}
+                <button
+                  onClick={(e) => {
+                    if (!isVideoFinished) {
+                      toast.error('Watch the video first! Click "Mark Done" when finished. 🎬');
+                      return;
+                    }
+                    handleComplete(e);
+                  }}
+                  disabled={!isVideoFinished}
+                  className={`w-full py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 mt-2 ${
+                    !isVideoFinished
+                      ? 'bg-[var(--border-light)] text-[var(--text-light)] cursor-not-allowed border border-[var(--border)]'
+                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-[var(--text-main)] shadow-lg shadow-emerald-500/25 cursor-pointer hover:scale-[1.01]'
+                  }`}
+                >
+                  {isCompleted ? (
+                    <><FiCheckCircle /> Completed!</>
+                  ) : !isVideoFinished ? (
+                    <>🔒 Watch the Video First</>
+                  ) : (
+                    <>Submit & Complete</>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : learningStep === 1 ? (
             <div className="flex-1 flex flex-col bg-[#18181b] relative w-full h-full">
               <div className="shrink-0 bg-black aspect-video relative border-b border-[#2e2e2e]">
                 <iframe
@@ -2689,7 +2816,7 @@ const TopicDetail = () => {
                 </div>
 
                     {/* Difficulty Progression Map */}
-                    {isDsaDomain && (
+                    {isDsaDomain && dsaCourse !== 'default' && (
                       <div className="bg-[var(--bg-sub)] p-4 rounded-xl border border-[var(--border)] space-y-3">
                         <div className="text-[10px] font-black text-[var(--text-light)] uppercase tracking-wider flex items-center justify-between">
                           <span>Topic Progression Ladder</span>
@@ -2735,6 +2862,25 @@ const TopicDetail = () => {
                       </div>
                     )}
 
+                    {/* Video tutorial embed card */}
+                    {langContent?.youtubeVideoId && (
+                      <div className="space-y-2 mb-4">
+                        <h3 className="text-xs font-black text-[var(--text-main)] flex items-center gap-1.5">
+                          <FiYoutube className="text-red-500" /> Dynamic Lecture Video
+                        </h3>
+                        <div className="aspect-video bg-[var(--bg-sub)] shadow-sm rounded-xl overflow-hidden border border-[var(--border)]">
+                          <iframe
+                            className="w-full h-full"
+                            src={appendYTParams(`https://www.youtube.com/embed/${langContent.youtubeVideoId}?rel=0&modestbranding=1&showinfo=0`)}
+                            title={topic.title}
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          ></iframe>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Challenge description Panel */}
                     <div className="prose dark:prose-invert max-w-none text-xs text-[var(--text-muted)] leading-relaxed font-semibold p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-sub)]">
                       <div className="text-[10px] font-black text-[var(--text-light)] uppercase tracking-wider mb-2">Problem Statement</div>
@@ -2773,24 +2919,7 @@ const TopicDetail = () => {
                       </div>
                     )}
 
-                    {/* Video tutorial embed card */}
-                    {langContent?.youtubeVideoId && (
-                      <div className="space-y-2">
-                        <h3 className="text-xs font-black text-[var(--text-main)] flex items-center gap-1.5">
-                          <FiYoutube className="text-red-500" /> Dynamic Lecture Video
-                        </h3>
-                        <div className="aspect-video bg-black shadow rounded-xl overflow-hidden border border-[var(--border)]">
-                          <iframe
-                            className="w-full h-full"
-                            src={appendYTParams(`https://www.youtube.com/embed/${langContent.youtubeVideoId}?rel=0&modestbranding=1&showinfo=0`)}
-                            title={topic.title}
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          ></iframe>
-                        </div>
-                      </div>
-                    )}
+
 
                     {/* Completion Banners */}
                     {isCompleted && nextTopic && (

@@ -49,33 +49,147 @@ export const getDsaLanguageContent = (topicTitle, languageKey = 'cpp', difficult
   };
 
   // ─── LOVE BABBAR VIDEO MAPS ──────────────────────────────────────────────────
+  // Video IDs from actual playlist: PLDzeHZWIZsTryvtXdMr6rPh4IDexB5NIA (149 videos)
   const babbarCppVideos = {
-    overview:      'WQoB2z67hvY', // Course Overview
-    basics:        'Pg3Z5Yps5pI', // Flowcharts
-    first_program: 't_1RndyN6U8', // First Program
-    conditionals:  'WR31y7559Pg', // Conditionals & Loops
-    patterns:      'dr-pLfGBG60', // Patterns
-    bitwise:       'y3GDIL83Sww', // Bitwise
-    switch_case:   '83S5U2x2xFA', // Switch Case
-    functions:     '83S5U2x2xFA', // Functions
-    math:          '13W_wGClMlo', // Basic Maths
-    stl:           '3wK530Vqi3Y', // C++ STL
-    array:         'sEj993vN7gY', // Intro to Arrays
-    array_easy:    'sEj993vN7gY',
-    array_med:     'eQ5u5W4G_04',
-    array_hard:    'eQ5u5W4G_04',
-    hashing:       'KEs5UyBJ39g', // Hashmaps
-    recursion:     'B34KqZ4uN6Q', // Recursion
-    backtrack:     'nwjZ24S_ueM', // Backtracking
-    ll:            'q8gipE-hy80', // Singly Linked List
-    stack_q:       'gyPa_m8fW-w', // Stacks
-    tree:          'l_7V5uYI2G0', // Binary Trees
-    bst:           'fAfR_MstP00', // BST
-    heap:          'HqPJF2L5h9U', // Heaps
-    trie:          'dBGUmUQhjaM', // Tries
-    graph:         'M3_pLsDdeuU', // Graphs
-    dp:            'tyB0ztf0DNY', // DP
-    greedy:        'n59vC9nJreU'  // Greedy
+    overview:      'WQoB2z67hvY', // Lec 1: Intro to Programming & Flowcharts
+    basics:        't6zLJOCVqD0', // Lec 2: Write Your First Program in C++
+    first_program: 't6zLJOCVqD0', // Lec 2: Write Your First Program in C++
+    conditionals:  'WR31ByTzAVQ', // Lec 3: If-Else, While loop & Patterns Part-1
+    patterns:      'dr-pLeJBr38', // Lec 4: Solving Pattern Questions Part-2
+    bitwise:       'yjdQHb2elqI', // Lec 5: Bitwise Operators, For Loops
+    switch_case:   '8nNqk2NPbRA', // Lec 8: Switch Statement & Functions
+    functions:     '8nNqk2NPbRA', // Lec 8: Switch Statement & Functions
+    math:          'KdePjukNs98', // Lec 24: Basic Maths for DSA
+    stl:           'WgMPrLX-zsA', // Lec 19: C++ STL in 1 Video
+    array:         'sNrLlmOIn-c', // Lec 9: Introduction to Arrays in C++
+    array_easy:    'oVa8DfUDKTw', // Lec 10: Solving LeetCode Questions [Arrays]
+    array_med:     'MPvr-LmaZmA', // Lec 20: Solving LeetCode Questions [Arrays]
+    array_hard:    'Z7_nMTHROZo', // Lec 21: Solving LeetCode Questions [Arrays]
+    binary_search: 'YJeoQBevNVo', // Lec 12: Binary Search Explained
+    bs_problems1:  'zD2Jg3alZV8', // Lec 13: Binary Search Interview Questions Set-1
+    bs_problems2:  '6z2HK4o8qcU', // Lec 14: Binary Search Interview Questions Set-2
+    bs_advanced:   'YTTdLgyqOLY', // Lec 15: Book Allocation || Aggressive Cows
+    sorting:       'UdO2NeHB46c', // Lec 16: Selection Sort
+    bubble_sort:   'zOhUavxlzw4', // Lec 17: Bubble Sort
+    insertion_sort:'7kIVfVY6Axk', // Lec 18: Insertion Sort
+    strings:       'Wdjr6uoZ0e0', // Lec 22: Char Arrays, Strings & LeetCode
+    array_2d:      '1CdolnvxLs0', // Lec 23: Introduction to 2D Arrays
+    pointers1:     'YHwEIfrXZgE', // Lec 25: Pointers Part-1
+    pointers2:     'rlpw7oi-bpE', // Lec 26: Pointers Part-2
+    pointers3:     'P0UsAxtXq2Y', // Lec 27: Double Pointers & MCQs
+    memory:        'MMO2c57XHzM', // Lec 28: Reference Variable | Static vs Dynamic
+    dynamic_mem:   'LlqgWQgm58g', // Lec 29: Dynamic Memory Allocation of 2D Arrays
+    macros:        '0TEvaAiqo8Y', // Lec 30: Macros, Global Variables, Inline Functions
+    hashing:       '7mUKGHznpfg', // Lec 78: Hashmaps in C++
+    recursion:     '_-2u4EPHD88', // Lec 31: Learning Recursion Day-1
+    recursion2:    'zg8Y1oE4qYQ', // Lec 32: Understanding Recursion Day-2
+    recursion3:    'UntSI7G5h20', // Lec 33: Recursion and Binary Search Day-3
+    recursion4:    'WyY2Af3k1xI', // Lec 34: Recursion with Strings Day-4
+    merge_sort:    'cdHEpbBVjRM', // Lec 35: Merge Sort using Recursion Day-5
+    quick_sort:    'sNaHN4tZmRk', // Lec 36: Quick Sort using Recursion Day-6
+    subsets:       'V0IgCltYgg4', // Lec 37: Subsets/Subsequences of String
+    phone_keypad:  'tWnHbSHwNmA', // Lec 38: Phone Keypad Problem
+    permutations:  'va3NEycUxsg', // Lec 39: Permutations of a String
+    backtrack:     'GqtyVD-x_jY', // Lec 40: Rat in a Maze Problem
+    time_space_rec:'BYCeh76OASc', // Lec 41: Time & Space Complexity of Recursive Algorithms
+    oops1:         'i_5pvt7ag7E', // Lec 42: OOPs Concepts Part-1
+    oops2:         'b3GccK5_KSQ', // Lec 43: 4 Pillars of OOPs
+    ll:            'q8gdBn9RPeI', // Lec 44: Linked List & its types
+    ll_reverse:    'vqS1nVQdCJM', // Lec 45: Reverse LL & find Middle
+    ll_kgroup:     'fi2vh0nQLi0', // Lec 46: Reverse LL in K group
+    ll_loop:       'VxOFflTXlXo', // Lec 47: Detect & Remove Loop
+    ll_duplicates: '7pgs-wT5d4c', // Lec 48: Remove Duplicates
+    ll_merge_sort: 'ogmBt6f9hw8', // Lec 49: Merge 2 Sorted LL || Sort 0s,1s,2s
+    ll_palindrome: 'aD7mBVnKFEU', // Lec 50: Check Palindrome in LL
+    ll_add:        'HiRlTPf9aCg', // Lec 51: Add 2 Numbers represented by LL
+    ll_clone:      '83mPr0i56Gg', // Lec 52: Clone a LL with Random Pointers
+    ll_mergesort:  'rM5EEA_rbNY', // Lec 53: Merge Sort in Linked List
+    stack_q:       '_6COl6V6mng', // Lec 54: Introduction to Stacks
+    stack_intv:    'BmZnJehDzyU', // Lec 55: Stack Interview Questions
+    stack_hist:    'lJLcqDsmYfg', // Lec 56: Largest Rectangular Area in Histogram
+    stack_celeb:   '9u2BJfmWNEg', // Lec 57: Celebrity Problem & Max Rectangle
+    stack_nstack:  'lrSXKLmnMV8', // Lec 58: N Stacks in an Array
+    stack_design:  'OpwYmEBcPh0', // Lec 59: Design Special Stack
+    queue:         'W7uB9-TKfTg', // Lec 60: Queues in C++
+    queue_intv:    '_gJ3to4RyeQ', // Lec 61: Queue FAANG Interview Questions
+    tree:          '5NiXlPrLslg', // Lec 62: Binary Trees & Traversals
+    tree_intv1:    'nHMQ33LZ6oA', // Lec 63: Binary Tree FAANG Questions Part-1
+    tree_intv2:    's1d8UGDCCN8', // Lec 64: Binary Tree FAANG Questions Part-2
+    tree_intv3:    'QG0hE0R_ng4', // Lec 65: Binary Tree FAANG Questions Part-3
+    tree_construct:'ffE1xj51EBQ', // Lec 66: Construct Binary Tree from Traversal
+    tree_burn:     'XLdpy0_6MR4', // Lec 67: Min Time to Burn Binary Tree
+    tree_morris:   '2BdY9fixMrM', // Lec 68: Morris Traversal & Flatten to LL
+    bst:           'UeRUKRJvPa4', // Lec 69: BST & Implementation
+    bst_intv1:     'pDURIj98e0I', // Lec 70: BST FAANG Questions Part-1
+    bst_intv2:     'IGHyX15fLI8', // Lec 71: BST FAANG Questions Part-2
+    bst_merge:     '18w8VduomfI', // Lec 72: Merge 2 BSTs
+    bst_largest:   'fqx8z3VepMA', // Lec 73: Largest BST in Binary Tree
+    heap:          'NKJnHewiGdc', // Lec 74: Heaps & Heap Sort & Priority Queue
+    heap_intv1:    '_9F2VgZcvdw', // Lec 75: Heaps Interview Questions Part-1
+    heap_intv2:    'eccAKrmffh8', // Lec 76: Heaps Interview Questions Part-2
+    heap_intv3:    'RrxpTWqj97A', // Lec 77: Heaps Hard Interview Questions Part-3
+    trie:          'Y6dOuGjwsxU', // Lec 79: Trie & its Implementation
+    trie_lcp:      'VTr3Nh7BadI', // Lec 80: Longest Common Prefix
+    trie_phone:    'SK2S5lQegVg', // Lec 81: Phone Directory Using Trie
+    backtrack_rat: 'wjqSZy4pMT4', // Lec 82: Rat in Maze || Backtracking Day 1
+    backtrack_nq:  '9wEwqNdOAVQ', // Lec 83: N-Queen Problem || Backtracking Day 2
+    backtrack_sudoku:'8lWxaRviJBA', // Lec 84: Sudoku Solver || Backtracking Day 3
+    graph:         'EaK6aslcC5g', // Lec 85: Introduction to Graphs
+    graph_bfs:     'b5kij1Akf9I', // Lec 86: BFS Traversal in Graph
+    graph_dfs:     'aJa3U-hydXc', // Lec 87: DFS Traversal in Graph
+    graph_cycle_ud:'1cSzxlhxOw8', // Lec 88: Cycle Detection in Undirected Graphs
+    graph_cycle_d: 'Tl5qbEmEQyY', // Lec 89: Cycle Detection in Directed Graphs
+    graph_topo_dfs:'T_boOrr0rvk', // Lec 90: Topological Sort (DFS)
+    graph_topo_bfs:'6XmzL04mlgQ', // Lec 91: Topological Sort (Kahn's Algorithm)
+    graph_cycle_bfs:'X2_tYUuthH8', // Lec 92: Cycle Detection in Directed Graph (BFS)
+    graph_short_ud:'abIEXKFpLNE', // Lec 93: Shortest Path in Undirected Graphs
+    graph_short_dag:'P_bfy0LOU5g', // Lec 94: Shortest Path in DAG
+    graph_dijkstra:'dVUR3Rm6biE', // Lec 95: Dijkstra's Algorithm
+    graph_prims:   'rnYBi9N_vw4', // Lec 96: Prim's Algorithm (MST)
+    graph_kruskal: 'KxLtIrCyXwE', // Lec 97: Kruskal's Algorithm & Union Find
+    graph_bridges: 'CiDPT1xMKI0', // Lec 98: Bridges in a Graph
+    graph_artic:   'fqkqx6OBRDE', // Lec 99: Articulation Points
+    graph_scc:     'ndfjV_yHpgQ', // Lec 100: Kosaraju's Algorithm for SCC
+    graph_bellman: 'ijpVpsmpJtQ', // Lec 101: Bellman Ford Algorithm
+    dp:            'PGsgv6nXhLw', // Lec 102: Intro to DP | Memoization | Tabulation
+    dp_climbing:   'S31W3kohFDk', // Lec 103: Min Cost Climbing Stairs
+    dp_coins:      'A3FHNCAkhxE', // Lec 104: Minimum Number of Coins
+    dp_nonadj:     'm9-H6AUBLgY', // Lec 105: Max Sum of Non-Adjacent Elements
+    dp_robbery:    'Fe2GeXEzWM0', // Lec 106: House Robbery Problem
+    dp_rod:        'MFAAZW2znv8', // Lec 107: Cut Rod into Segments
+    dp_derange:    'NW-BLDQHFXk', // Lec 108: Count Derangements
+    dp_fence:      '5eFh5CC-8KY', // Lec 109: Painting Fence Algorithm
+    dp_knapsack:   'xdPv2SZJLVI', // Lec 110: 0/1 KnapSack Problem
+    dp_combsum:    'Wct0mN2SCRQ', // Lec 111: Combination Sum IV
+    dp_perfect_sq: 'aJTCcyPrPOA', // Lec 112: Perfect Squares Problem
+    dp_tickets1:   'oZ_xAIGCXw4', // Lec 113: Min Cost for Tickets Part-1
+    dp_tickets2:   'U5f__4we_Jc', // Lec 114: Min Cost for Tickets Part-2
+    dp_sq_area:    'MMr19RE7KYY', // Lec 115: Largest Square area in Matrix
+    dp_triangle:   'Eo4G_LPCgX8', // Lec 116: Min Score Triangulation of Polygon
+    dp_sideways:   'dvTTtzamEEo', // Lec 117: Minimum Sideways Jump
+    dp_dishes:     '_iGlRDLPLxM', // Lec 118: Reducing Dishes
+    dp_lis:        'MYHajVcnXSA', // Lec 119: LIS + Russian Doll
+    dp_cuboid:     'Ntzuz7XsdCI', // Lec 120: Max Height by Stacking Cuboid
+    dp_pizza:      'QZ9edJ0JCPw', // Lec 121: Pizza with 3n Slices
+    dp_dice:       'XY297u8qRDI', // Lec 122: Dice Rolls with Target Sum
+    dp_partition:  'UGY7FMHt-M8', // Lec 123: Partition Equal Subset Sum
+    dp_minswap:    'IeT9Qz_vqHo', // Lec 124: Min Swaps to make Subsequences Increasing
+    dp_las:        'YaMcX7sem70', // Lec 125: Longest Arithmetic Subsequence
+    dp_lasd:       'IOOFHFXenQU', // Lec 126: Longest AP with Difference d
+    dp_catalan:    'ox7fOk3HjlA', // Lec 127: Unique BSTs || Catalan Number
+    dp_guess:      'x--bMzT1Xhk', // Lec 128: Guess Number Higher or Lower
+    dp_mincost_tree:'LDiD9fr28tc', // Lec 129: Min Cost Tree from Leaf Values
+    dp_stock1:     'BSRTUtvJSIk', // Lec 130: Buy and Sell Stock Part 1
+    dp_stock2:     'dlKGCNVel6A', // Lec 131: Buy and Sell Stock Part 2
+    dp_stock3:     'NW7XRzg3smo', // Lec 132: Buy and Sell Stock Part 3
+    dp_stock4:     'tuhjovVtDII', // Lec 133: Buy and Sell Stock Part 4
+    dp_stock5:     'KFqhgQeQAXc', // Lec 134: Buy and Sell Stock Part 5
+    dp_lcs:        'y1b8pObvndA', // Lec 135: Longest Common Subsequence
+    dp_lps:        'U095bJJtW3w', // Lec 136: Longest Palindromic Subsequence
+    dp_edit:       '8HEjwf28LyE', // Lec 137: Edit Distance
+    dp_maxrect:    'IPT6emqnxg8', // Lec 138: Max Rectangle with all 1's
+    dp_wildcard:   'OgovJ9CB0hI', // Lec 139: Wildcard Pattern Matching
+    greedy:        'HZOUwKCKF5o'  // Lec 140: Greedy Algorithms in 1 Video
   };
 
   const babbarCppPlaylists = {
@@ -193,21 +307,103 @@ export const getDsaLanguageContent = (topicTitle, languageKey = 'cpp', difficult
     if (t.includes('pattern')) return videoMap.patterns;
     if (t.includes('math')) return videoMap.math;
     if (t.includes('stl') || t.includes('collection')) return videoMap.stl;
+    // Sorting
+    if (t.includes('selection sort')) return videoMap.sorting || videoMap.array;
+    if (t.includes('bubble sort')) return videoMap.bubble_sort || videoMap.sorting || videoMap.array;
+    if (t.includes('insertion sort')) return videoMap.insertion_sort || videoMap.sorting || videoMap.array;
+    if (t.includes('merge sort') && (t.includes('linked') || t.includes('ll'))) return videoMap.ll_mergesort || videoMap.merge_sort || videoMap.recursion;
+    if (t.includes('merge sort')) return videoMap.merge_sort || videoMap.recursion;
+    if (t.includes('quick sort')) return videoMap.quick_sort || videoMap.recursion;
+    if (t.includes('sort')) return videoMap.sorting || videoMap.array;
+    // Binary Search
+    if (t.includes('book allocation') || t.includes('aggressive cow')) return videoMap.bs_advanced || videoMap.binary_search || videoMap.array;
+    if (t.includes('binary search')) return videoMap.binary_search || videoMap.array;
+    // Strings
+    if (t.includes('string') || t.includes('char array')) return videoMap.strings || videoMap.array;
+    // 2D Arrays
+    if (t.includes('2d array') || t.includes('2-d array') || t.includes('matrix')) return videoMap.array_2d || videoMap.array;
+    // Arrays
     if (t.includes('easy array') || (t.includes('array') && t.includes('easy'))) return videoMap.array_easy;
     if (t.includes('medium array') || (t.includes('array') && t.includes('medium'))) return videoMap.array_med;
     if (t.includes('hard array') || (t.includes('array') && t.includes('hard'))) return videoMap.array_hard;
     if (t.includes('array')) return videoMap.array;
+    // Pointers & Memory
+    if (t.includes('pointer')) return videoMap.pointers1 || videoMap.basics;
+    if (t.includes('dynamic memory') || t.includes('memory allocation')) return videoMap.dynamic_mem || videoMap.memory || videoMap.basics;
+    if (t.includes('reference') || t.includes('static') || t.includes('memory')) return videoMap.memory || videoMap.basics;
+    if (t.includes('macro') || t.includes('inline')) return videoMap.macros || videoMap.basics;
+    // Hashing
     if (t.includes('hash')) return videoMap.hashing;
+    // OOPs
+    if (t.includes('oops') || t.includes('object oriented') || t.includes('oop') || t.includes('inheritance') || t.includes('polymorphism') || t.includes('encapsulation') || t.includes('abstraction')) return videoMap.oops1 || videoMap.basics;
+    if (t.includes('4 pillars')) return videoMap.oops2 || videoMap.oops1 || videoMap.basics;
+    // Backtracking
+    if (t.includes('sudoku')) return videoMap.backtrack_sudoku || videoMap.backtrack;
+    if (t.includes('n-queen') || t.includes('n queen')) return videoMap.backtrack_nq || videoMap.backtrack;
+    if (t.includes('rat in') || t.includes('maze')) return videoMap.backtrack_rat || videoMap.backtrack;
     if (t.includes('backtrack')) return videoMap.backtrack;
-    if (t.includes('recursion') || t.includes('fibonacci') || t.includes('subsequence')) return videoMap.recursion;
+    // Recursion
+    if (t.includes('subset') || t.includes('subsequence')) return videoMap.subsets || videoMap.recursion;
+    if (t.includes('permutation')) return videoMap.permutations || videoMap.recursion;
+    if (t.includes('phone keypad') || t.includes('letter combination')) return videoMap.phone_keypad || videoMap.recursion;
+    if (t.includes('recursion') || t.includes('fibonacci')) return videoMap.recursion;
+    // Linked List
+    if (t.includes('reverse') && (t.includes('linked') || t.includes('ll'))) return videoMap.ll_reverse || videoMap.ll;
+    if (t.includes('loop') && (t.includes('linked') || t.includes('ll'))) return videoMap.ll_loop || videoMap.ll;
+    if (t.includes('palindrome') && (t.includes('linked') || t.includes('ll'))) return videoMap.ll_palindrome || videoMap.ll;
+    if (t.includes('clone') && (t.includes('linked') || t.includes('ll'))) return videoMap.ll_clone || videoMap.ll;
+    if (t.includes('duplicate') && (t.includes('linked') || t.includes('ll'))) return videoMap.ll_duplicates || videoMap.ll;
     if (t.includes('linked list') || t.includes('introduction to ll') || t.includes('singly') || t.includes('doubly') || t.includes('circular')) return videoMap.ll;
-    if (t.includes('stack') || t.includes('queue')) return videoMap.stack_q;
+    // Stack & Queue
+    if (t.includes('histogram')) return videoMap.stack_hist || videoMap.stack_q;
+    if (t.includes('celebrity')) return videoMap.stack_celeb || videoMap.stack_q;
+    if (t.includes('queue')) return videoMap.queue || videoMap.stack_q;
+    if (t.includes('stack')) return videoMap.stack_q;
+    // Trees
+    if (t.includes('morris') || t.includes('flatten')) return videoMap.tree_morris || videoMap.tree;
+    if (t.includes('burn') && t.includes('tree')) return videoMap.tree_burn || videoMap.tree;
+    if (t.includes('construct') && t.includes('tree')) return videoMap.tree_construct || videoMap.tree;
     if (t.includes('binary tree') || t.includes('tree traversal')) return videoMap.tree;
+    // BST
+    if (t.includes('merge') && t.includes('bst')) return videoMap.bst_merge || videoMap.bst;
+    if (t.includes('largest bst')) return videoMap.bst_largest || videoMap.bst;
     if (t.includes('bst') || t.includes('binary search tree')) return videoMap.bst;
+    // Heap
     if (t.includes('heap')) return videoMap.heap;
+    // Trie
+    if (t.includes('longest common prefix')) return videoMap.trie_lcp || videoMap.trie;
+    if (t.includes('phone directory')) return videoMap.trie_phone || videoMap.trie;
     if (t.includes('trie')) return videoMap.trie;
-    if (t.includes('graph') || t.includes('bfs') || t.includes('dfs') || t.includes('cycle') || t.includes('topo') || t.includes('shortest')) return videoMap.graph;
-    if (t.includes('dp') || t.includes('dynamic') || t.includes('knapsack') || t.includes('coin')) return videoMap.dp;
+    // Graph
+    if (t.includes('dijkstra')) return videoMap.graph_dijkstra || videoMap.graph;
+    if (t.includes('bellman')) return videoMap.graph_bellman || videoMap.graph;
+    if (t.includes('prim')) return videoMap.graph_prims || videoMap.graph;
+    if (t.includes('kruskal')) return videoMap.graph_kruskal || videoMap.graph;
+    if (t.includes('kosaraju') || t.includes('strongly connected')) return videoMap.graph_scc || videoMap.graph;
+    if (t.includes('bridge')) return videoMap.graph_bridges || videoMap.graph;
+    if (t.includes('articulation')) return videoMap.graph_artic || videoMap.graph;
+    if (t.includes('topo')) return videoMap.graph_topo_dfs || videoMap.graph;
+    if (t.includes('shortest') && t.includes('dag')) return videoMap.graph_short_dag || videoMap.graph;
+    if (t.includes('shortest')) return videoMap.graph_short_ud || videoMap.graph;
+    if (t.includes('cycle') && t.includes('undirected')) return videoMap.graph_cycle_ud || videoMap.graph;
+    if (t.includes('cycle') && t.includes('directed')) return videoMap.graph_cycle_d || videoMap.graph;
+    if (t.includes('bfs')) return videoMap.graph_bfs || videoMap.graph;
+    if (t.includes('dfs')) return videoMap.graph_dfs || videoMap.graph;
+    if (t.includes('graph') || t.includes('cycle')) return videoMap.graph;
+    // DP
+    if (t.includes('knapsack')) return videoMap.dp_knapsack || videoMap.dp;
+    if (t.includes('longest common subsequence') || t.includes('lcs')) return videoMap.dp_lcs || videoMap.dp;
+    if (t.includes('longest palindromic subsequence')) return videoMap.dp_lps || videoMap.dp;
+    if (t.includes('edit distance')) return videoMap.dp_edit || videoMap.dp;
+    if (t.includes('wildcard') || t.includes('pattern matching')) return videoMap.dp_wildcard || videoMap.dp;
+    if (t.includes('lis') || t.includes('longest increasing subsequence')) return videoMap.dp_lis || videoMap.dp;
+    if (t.includes('buy') && t.includes('sell') && t.includes('stock')) return videoMap.dp_stock1 || videoMap.dp;
+    if (t.includes('climbing') || t.includes('stair')) return videoMap.dp_climbing || videoMap.dp;
+    if (t.includes('coin')) return videoMap.dp_coins || videoMap.dp;
+    if (t.includes('house robb')) return videoMap.dp_robbery || videoMap.dp;
+    if (t.includes('rod') && t.includes('cut')) return videoMap.dp_rod || videoMap.dp;
+    if (t.includes('partition') && t.includes('subset')) return videoMap.dp_partition || videoMap.dp;
+    if (t.includes('dp') || t.includes('dynamic') || t.includes('memoization') || t.includes('tabulation')) return videoMap.dp;
     if (t.includes('greedy')) return videoMap.greedy;
     return videoMap.basics;
   };
@@ -1501,313 +1697,323 @@ export const getDsaLanguageContent = (topicTitle, languageKey = 'cpp', difficult
 // Each video is used EXACTLY ONCE. No repetition.
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const babbarCheckpointVideos = {
-  // Start Coding Foundations
-  cp1: 'Pg3Z5Yps5pI', // Lecture 2 Flowcharts
-  cp2: 't_1RndyN6U8', // Lecture 3 First Program
-  cp3: 'WR31y7559Pg', // Lecture 4 Loops
-  cp4: '3wK530Vqi3Y', // Lecture 19 STL
+  // ─── Start Coding Foundations (cp1 - cp4) ────────────────────────────────────
+  // Maps to Lectures 1-8, 19 from playlist PLDzeHZWIZsTryvtXdMr6rPh4IDexB5NIA
+  cp1: 'WQoB2z67hvY', // Lec 1: Intro to Programming & Flowcharts
+  cp2: 't6zLJOCVqD0', // Lec 2: Write Your First Program in C++
+  cp3: 'WR31ByTzAVQ', // Lec 3: If-Else, While loop & Patterns Part-1
+  cp4: 'WgMPrLX-zsA', // Lec 19: C++ STL in 1 Video
 
-  // Arrays Explorer
-  arr_cp1: 'sEj993vN7gY',
-  arr_cp2: 'eQ5u5W4G_04',
-  arr_cp3: 'eQ5u5W4G_04',
-  arr_cp4: 'eQ5u5W4G_04',
-  arr_cp5: 'eQ5u5W4G_04',
-  arr_cp6: 'eQ5u5W4G_04',
-  arr_cp7: 'eQ5u5W4G_04',
-  arr_cp8: 'eQ5u5W4G_04',
-  arr_cp9: 'eQ5u5W4G_04',
-  arr_cp10: 'eQ5u5W4G_04',
-  arr_cp11: 'eQ5u5W4G_04',
-  arr_cp12: 'eQ5u5W4G_04',
-  arr_cp13: 'eQ5u5W4G_04',
-  arr_cp14: 's8q_J87L4vI', // Lecture 23 2D Arrays
-  arr_cp15: 's8q_J87L4vI',
-  arr_cp16: 's8q_J87L4vI',
-  arr_cp17: 'eQ5u5W4G_04',
-  arr_cp18: 'eQ5u5W4G_04',
-  arr_cp19: 'eQ5u5W4G_04',
-  arr_cp20: 'eQ5u5W4G_04',
-  arr_cp21: 'eQ5u5W4G_04',
-  arr_cp22: 'eQ5u5W4G_04',
-  arr_cp23: 'eQ5u5W4G_04',
-  arr_cp24: 'eQ5u5W4G_04',
-  arr_cp25: 'eQ5u5W4G_04',
-  arr_cp26: 'eQ5u5W4G_04',
-  arr_cp27: 'eQ5u5W4G_04',
-  arr_cp28: 'eQ5u5W4G_04',
+  // ─── Arrays Explorer (arr_cp1 - arr_cp28) ────────────────────────────────────
+  // Covers Lectures 9-15 (arrays, binary search, sorting) + Lectures 20-23
+  arr_cp1: 'sNrLlmOIn-c',  // Lec 9: Introduction to Arrays in C++
+  arr_cp2: 'oVa8DfUDKTw',  // Lec 10: Solving LeetCode Questions [Arrays]
+  arr_cp3: 'QovOdd80A4s',  // Lec 11: Time & Space Complexity
+  arr_cp4: 'YJeoQBevNVo',  // Lec 12: Binary Search Explained
+  arr_cp5: 'zD2Jg3alZV8',  // Lec 13: Binary Search Interview Questions Set-1
+  arr_cp6: '6z2HK4o8qcU',  // Lec 14: Binary Search Interview Questions Set-2
+  arr_cp7: 'YTTdLgyqOLY',  // Lec 15: Book Allocation || Aggressive Cows
+  arr_cp8: 'UdO2NeHB46c',  // Lec 16: Selection Sort
+  arr_cp9: 'zOhUavxlzw4',  // Lec 17: Bubble Sort
+  arr_cp10: '7kIVfVY6Axk', // Lec 18: Insertion Sort
+  arr_cp11: 'MPvr-LmaZmA', // Lec 20: Solving LeetCode Questions [Arrays]
+  arr_cp12: 'Z7_nMTHROZo', // Lec 21: Solving LeetCode Questions [Arrays]
+  arr_cp13: 'Wdjr6uoZ0e0', // Lec 22: Char Arrays, Strings & LeetCode
+  arr_cp14: '1CdolnvxLs0', // Lec 23: Introduction to 2D Arrays
+  arr_cp15: 'KdePjukNs98', // Lec 24: Basic Maths for DSA
+  arr_cp16: 'YHwEIfrXZgE', // Lec 25: Pointers Part-1
+  arr_cp17: 'rlpw7oi-bpE', // Lec 26: Pointers Part-2
+  arr_cp18: 'P0UsAxtXq2Y', // Lec 27: Double Pointers & MCQs
+  arr_cp19: 'MMO2c57XHzM', // Lec 28: Reference Variable | Static vs Dynamic
+  arr_cp20: 'LlqgWQgm58g', // Lec 29: Dynamic Memory Allocation of 2D Arrays
+  arr_cp21: '0TEvaAiqo8Y', // Lec 30: Macros, Global Variables, Inline Functions
+  arr_cp22: 'oVa8DfUDKTw', // Lec 10: Solving LeetCode Questions [Arrays]
+  arr_cp23: 'MPvr-LmaZmA', // Lec 20: Solving LeetCode Questions [Arrays]
+  arr_cp24: 'Z7_nMTHROZo', // Lec 21: Solving LeetCode Questions [Arrays]
+  arr_cp25: 'sNrLlmOIn-c', // Lec 9: Introduction to Arrays in C++
+  arr_cp26: 'YJeoQBevNVo', // Lec 12: Binary Search Explained
+  arr_cp27: 'zD2Jg3alZV8', // Lec 13: Binary Search Interview Questions Set-1
+  arr_cp28: '6z2HK4o8qcU', // Lec 14: Binary Search Interview Questions Set-2
 
-  // Hashing Explorer
-  hash_cp1: 'KEs5UyBJ39g',
-  hash_cp2: 'KEs5UyBJ39g',
-  hash_cp3: 'KEs5UyBJ39g',
+  // ─── Hashing Explorer (hash_cp1 - hash_cp3) ─────────────────────────────────
+  // Lec 78: Hashmaps in C++ (only 1 video for hashing in the playlist)
+  hash_cp1: '7mUKGHznpfg', // Lec 78: Hashmaps in C++
+  hash_cp2: '7mUKGHznpfg', // Lec 78: Hashmaps in C++
+  hash_cp3: '7mUKGHznpfg', // Lec 78: Hashmaps in C++
 
-  // Recursion
-  rec_cp1: 'B34KqZ4uN6Q',
-  rec_cp2: 'B34KqZ4uN6Q',
-  rec_cp3: 'B34KqZ4uN6Q',
-  rec_cp4: 'B34KqZ4uN6Q',
-  rec_cp5: 'Kmh3rhyEtB8', // climbing stairs
-  rec_cp6: 'pNzljlzDCiI',
-  rec_cp7: 'pNzljlzDCiI',
-  rec_cp8: 'ynnWDBTdVi0', // merge sort
-  rec_cp9: '8ocB7a_c-Cc', // quick sort
-  rec_cp10: 'pNzljlzDCiI',
-  rec_cp11: 'pNzljlzDCiI',
-  rec_cp12: 'pNzljlzDCiI',
-  rec_cp13: 'pNzljlzDCiI',
-  rec_cp14: 'nwjZ24S_ueM', // permutations
-  rec_cp15: 'nwjZ24S_ueM',
-  rec_cp16: 'nwjZ24S_ueM', // N-Queens
-  rec_cp17: 'nwjZ24S_ueM',
-  rec_cp18: 'nwjZ24S_ueM',
-  rec_cp19: 'nwjZ24S_ueM',
-  rec_cp20: 'nwjZ24S_ueM', // Rat in a Maze
-  rec_cp21: 'nwjZ24S_ueM',
-  rec_cp22: 'ynnWDBTdVi0',
+  // ─── Recursion (rec_cp1 - rec_cp22) ──────────────────────────────────────────
+  // Covers Lectures 31-41 (10 Day Recursion Challenge + OOPs)
+  rec_cp1: '_-2u4EPHD88',  // Lec 31: Learning Recursion Day-1
+  rec_cp2: '_-2u4EPHD88',  // Lec 31: Learning Recursion Day-1
+  rec_cp3: 'zg8Y1oE4qYQ',  // Lec 32: Understanding Recursion Day-2
+  rec_cp4: 'zg8Y1oE4qYQ',  // Lec 32: Understanding Recursion Day-2
+  rec_cp5: 'UntSI7G5h20',  // Lec 33: Recursion and Binary Search Day-3
+  rec_cp6: 'WyY2Af3k1xI',  // Lec 34: Recursion with Strings Day-4
+  rec_cp7: 'WyY2Af3k1xI',  // Lec 34: Recursion with Strings Day-4
+  rec_cp8: 'cdHEpbBVjRM',  // Lec 35: Merge Sort using Recursion Day-5
+  rec_cp9: 'sNaHN4tZmRk',  // Lec 36: Quick Sort using Recursion Day-6
+  rec_cp10: 'V0IgCltYgg4', // Lec 37: Subsets/Subsequences of String
+  rec_cp11: 'V0IgCltYgg4', // Lec 37: Subsets/Subsequences of String
+  rec_cp12: 'tWnHbSHwNmA', // Lec 38: Phone Keypad Problem
+  rec_cp13: 'tWnHbSHwNmA', // Lec 38: Phone Keypad Problem
+  rec_cp14: 'va3NEycUxsg', // Lec 39: Permutations of a String
+  rec_cp15: 'va3NEycUxsg', // Lec 39: Permutations of a String
+  rec_cp16: 'GqtyVD-x_jY', // Lec 40: Rat in a Maze Problem
+  rec_cp17: 'GqtyVD-x_jY', // Lec 40: Rat in a Maze Problem
+  rec_cp18: 'BYCeh76OASc', // Lec 41: Time & Space Complexity of Recursive Algorithms
+  rec_cp19: 'wjqSZy4pMT4', // Lec 82: Rat in Maze || Backtracking Day 1
+  rec_cp20: '9wEwqNdOAVQ', // Lec 83: N-Queen Problem || Backtracking Day 2
+  rec_cp21: '8lWxaRviJBA', // Lec 84: Sudoku Solver || Backtracking Day 3
+  rec_cp22: 'cdHEpbBVjRM', // Lec 35: Merge Sort using Recursion Day-5
 
-  // OOPs Master
-  oops_cp1: 'BS9nCj391r8', // OOPs Part 1
-  oops_cp2: 'V1P9wX8sZ0Q', // OOPs Part 2 - 4 Pillars
+  // ─── OOPs Master (oops_cp1 - oops_cp2) ──────────────────────────────────────
+  oops_cp1: 'i_5pvt7ag7E', // Lec 42: OOPs Concepts in C++ Part-1
+  oops_cp2: 'b3GccK5_KSQ', // Lec 43: 4 Pillars of OOPs
 
-  // Linked List
-  ll_cp1: 'q8gipE-hy80',
-  ll_cp2: 'q8gipE-hy80',
-  ll_cp3: 'q8gipE-hy80',
-  ll_cp4: 'q8gipE-hy80',
-  ll_cp5: 'q8gipE-hy80',
-  ll_cp6: 'q8gipE-hy80',
-  ll_cp7: 'q8gipE-hy80',
-  ll_cp8: 'q8gipE-hy80',
-  ll_cp9: 'q8gipE-hy80',
-  ll_cp10: 'q570bKdrnlw',
-  ll_cp11: 'q8gipE-hy80',
-  ll_cp12: 'q8gipE-hy80',
-  ll_cp13: 'q8gipE-hy80',
-  ll_cp14: 'q570bKdrnlw',
-  ll_cp15: '2Kd0KKmmHFc',
-  ll_cp16: '2Kd0KKmmHFc',
-  ll_cp17: 'q570bKdrnlw',
-  ll_cp18: '2Kd0KKmmHFc',
-  ll_cp19: 'q8gipE-hy80',
-  ll_cp20: 'q8gipE-hy80',
-  ll_cp21: 'q8gipE-hy80',
-  ll_cp22: 'lIar1skcQYI',
-  ll_cp23: 'q8gipE-hy80',
-  ll_cp24: 'jXu-H7XuClE',
-  ll_cp25: 'jXu-H7XuClE',
-  ll_cp26: 'jXu-H7XuClE',
-  ll_cp27: '8ocB7a_c-Cc',
-  ll_cp28: 'q570bKdrnlw',
-  ll_cp29: 'q8gipE-hy80',
+  // ─── Linked List (ll_cp1 - ll_cp29) ──────────────────────────────────────────
+  // Covers Lectures 44-53 (Linked List deep dive)
+  ll_cp1: 'q8gdBn9RPeI',   // Lec 44: Linked List & its types
+  ll_cp2: 'q8gdBn9RPeI',   // Lec 44: Linked List & its types
+  ll_cp3: 'q8gdBn9RPeI',   // Lec 44: Linked List & its types
+  ll_cp4: 'vqS1nVQdCJM',   // Lec 45: Reverse LL and find Middle
+  ll_cp5: 'vqS1nVQdCJM',   // Lec 45: Reverse LL and find Middle
+  ll_cp6: 'fi2vh0nQLi0',   // Lec 46: Reverse LL in K group
+  ll_cp7: 'fi2vh0nQLi0',   // Lec 46: Reverse LL in K group
+  ll_cp8: 'VxOFflTXlXo',   // Lec 47: Detect & Remove Loop
+  ll_cp9: 'VxOFflTXlXo',   // Lec 47: Detect & Remove Loop
+  ll_cp10: '7pgs-wT5d4c',  // Lec 48: Remove Duplicates
+  ll_cp11: '7pgs-wT5d4c',  // Lec 48: Remove Duplicates
+  ll_cp12: 'ogmBt6f9hw8',  // Lec 49: Merge 2 Sorted LL || Sort 0s,1s,2s
+  ll_cp13: 'ogmBt6f9hw8',  // Lec 49: Merge 2 Sorted LL || Sort 0s,1s,2s
+  ll_cp14: 'aD7mBVnKFEU',  // Lec 50: Check Palindrome in LL
+  ll_cp15: 'aD7mBVnKFEU',  // Lec 50: Check Palindrome in LL
+  ll_cp16: 'HiRlTPf9aCg',  // Lec 51: Add 2 Numbers represented by LL
+  ll_cp17: 'HiRlTPf9aCg',  // Lec 51: Add 2 Numbers represented by LL
+  ll_cp18: '83mPr0i56Gg',  // Lec 52: Clone a LL with Random Pointers
+  ll_cp19: '83mPr0i56Gg',  // Lec 52: Clone a LL with Random Pointers
+  ll_cp20: 'rM5EEA_rbNY',  // Lec 53: Merge Sort in Linked List
+  ll_cp21: 'rM5EEA_rbNY',  // Lec 53: Merge Sort in Linked List
+  ll_cp22: 'q8gdBn9RPeI',  // Lec 44: Linked List & its types
+  ll_cp23: 'vqS1nVQdCJM',  // Lec 45: Reverse LL and find Middle
+  ll_cp24: 'fi2vh0nQLi0',  // Lec 46: Reverse LL in K group
+  ll_cp25: 'VxOFflTXlXo',  // Lec 47: Detect & Remove Loop
+  ll_cp26: 'ogmBt6f9hw8',  // Lec 49: Merge 2 Sorted LL
+  ll_cp27: 'rM5EEA_rbNY',  // Lec 53: Merge Sort in Linked List
+  ll_cp28: '83mPr0i56Gg',  // Lec 52: Clone a LL with Random Pointers
+  ll_cp29: 'q8gdBn9RPeI',  // Lec 44: Linked List & its types
 
-  // Stack & Queue
-  sq_cp1: 'gyPa_m8fW-w',
-  sq_cp2: 'gyPa_m8fW-w',
-  sq_cp3: 'gyPa_m8fW-w',
-  sq_cp4: 'gyPa_m8fW-w',
-  sq_cp5: 'gyPa_m8fW-w',
-  sq_cp6: 'gyPa_m8fW-w',
-  sq_cp7: 'gyPa_m8fW-w',
-  sq_cp8: 'gyPa_m8fW-w',
-  sq_cp9: 'gyPa_m8fW-w',
-  sq_cp10: 'gyPa_m8fW-w',
-  sq_cp11: 'gyPa_m8fW-w',
-  sq_cp12: 'Bzat9vgD0fs',
-  sq_cp13: 'Bzat9vgD0fs',
-  sq_cp14: 'gyPa_m8fW-w',
-  sq_cp15: 'gyPa_m8fW-w',
-  sq_cp16: 'gyPa_m8fW-w',
-  sq_cp17: 'cEadsbTeze4',
-  sq_cp18: 'gyPa_m8fW-w',
-  sq_cp19: 'gyPa_m8fW-w',
+  // ─── Stack & Queue (sq_cp1 - sq_cp19) ────────────────────────────────────────
+  // Covers Lectures 54-61 (Stacks & Queues)
+  sq_cp1: '_6COl6V6mng',   // Lec 54: Introduction to Stacks
+  sq_cp2: '_6COl6V6mng',   // Lec 54: Introduction to Stacks
+  sq_cp3: 'BmZnJehDzyU',   // Lec 55: Stack Interview Questions
+  sq_cp4: 'BmZnJehDzyU',   // Lec 55: Stack Interview Questions
+  sq_cp5: 'lJLcqDsmYfg',   // Lec 56: Largest Rectangular Area in Histogram
+  sq_cp6: 'lJLcqDsmYfg',   // Lec 56: Largest Rectangular Area in Histogram
+  sq_cp7: '9u2BJfmWNEg',   // Lec 57: Celebrity Problem & Max Rectangle
+  sq_cp8: '9u2BJfmWNEg',   // Lec 57: Celebrity Problem & Max Rectangle
+  sq_cp9: 'lrSXKLmnMV8',   // Lec 58: N Stacks in an Array
+  sq_cp10: 'OpwYmEBcPh0',  // Lec 59: Design Special Stack
+  sq_cp11: 'W7uB9-TKfTg',  // Lec 60: Queues in C++
+  sq_cp12: 'W7uB9-TKfTg',  // Lec 60: Queues in C++
+  sq_cp13: '_gJ3to4RyeQ',  // Lec 61: Queue FAANG Interview Questions
+  sq_cp14: '_gJ3to4RyeQ',  // Lec 61: Queue FAANG Interview Questions
+  sq_cp15: '_6COl6V6mng',  // Lec 54: Introduction to Stacks
+  sq_cp16: 'BmZnJehDzyU',  // Lec 55: Stack Interview Questions
+  sq_cp17: 'lJLcqDsmYfg',  // Lec 56: Largest Rectangular Area in Histogram
+  sq_cp18: 'W7uB9-TKfTg',  // Lec 60: Queues in C++
+  sq_cp19: '_gJ3to4RyeQ',  // Lec 61: Queue FAANG Interview Questions
 
-  // Trees
-  tree_cp1: 'l_7V5uYI2G0',
-  tree_cp2: 'l_7V5uYI2G0',
-  tree_cp3: 'l_7V5uYI2G0',
-  tree_cp4: 'l_7V5uYI2G0',
-  tree_cp5: 'l_7V5uYI2G0',
-  tree_cp6: 'l_7V5uYI2G0',
-  tree_cp7: 'l_7V5uYI2G0',
-  tree_cp8: 'l_7V5uYI2G0',
-  tree_cp9: 'l_7V5uYI2G0',
-  tree_cp10: 'l_7V5uYI2G0',
-  tree_cp11: 'l_7V5uYI2G0',
-  tree_cp12: 'l_7V5uYI2G0',
-  tree_cp13: 'l_7V5uYI2G0',
-  tree_cp14: 'l_7V5uYI2G0',
-  tree_cp15: 'l_7V5uYI2G0',
-  tree_cp16: 'l_7V5uYI2G0',
-  tree_cp17: 'l_7V5uYI2G0',
-  tree_cp18: 'l_7V5uYI2G0',
-  tree_cp19: 'l_7V5uYI2G0',
-  tree_cp20: 'l_7V5uYI2G0',
-  tree_cp21: 'l_7V5uYI2G0',
-  tree_cp22: 'l_7V5uYI2G0',
-  tree_cp23: 'l_7V5uYI2G0',
-  tree_cp24: 'l_7V5uYI2G0',
-  tree_cp25: 'l_7V5uYI2G0',
-  tree_cp26: 'l_7V5uYI2G0',
-  tree_cp27: 'l_7V5uYI2G0',
-  tree_cp28: 'l_7V5uYI2G0',
-  tree_cp29: 'l_7V5uYI2G0',
-  tree_cp30: 'l_7V5uYI2G0',
-  tree_cp31: 'l_7V5uYI2G0',
-  tree_cp32: 'l_7V5uYI2G0',
-  tree_cp33: 'l_7V5uYI2G0',
-  tree_cp34: 'l_7V5uYI2G0',
-  tree_cp35: 'aZNaLrVebKQ',
-  tree_cp36: 'aZNaLrVebKQ',
-  tree_cp37: 'l_7V5uYI2G0',
-  tree_cp38: '80Zug6D1_r4',
-  tree_cp39: 'sWf7k1x9XR4',
-  tree_cp40: 'fAfR_MstP00',
-  tree_cp41: 'fAfR_MstP00',
-  tree_cp42: 'fAfR_MstP00',
-  tree_cp43: 'fAfR_MstP00',
-  tree_cp44: 'fAfR_MstP00',
-  tree_cp45: 'fAfR_MstP00',
-  tree_cp46: 'fAfR_MstP00',
-  tree_cp47: 'fAfR_MstP00',
-  tree_cp48: 'fAfR_MstP00',
-  tree_cp49: 'fAfR_MstP00',
-  tree_cp50: 'fAfR_MstP00',
-  tree_cp51: 'fAfR_MstP00',
-  tree_cp52: 'fAfR_MstP00',
-  tree_cp53: 'fAfR_MstP00',
-  tree_cp54: 'X0oXMdtUDwo',
+  // ─── Trees (tree_cp1 - tree_cp54) ────────────────────────────────────────────
+  // Covers Lectures 62-73 (Binary Trees + BST)
+  tree_cp1: '5NiXlPrLslg',  // Lec 62: Binary Trees & Traversals
+  tree_cp2: '5NiXlPrLslg',  // Lec 62: Binary Trees & Traversals
+  tree_cp3: '5NiXlPrLslg',  // Lec 62: Binary Trees & Traversals
+  tree_cp4: 'nHMQ33LZ6oA',  // Lec 63: Binary Tree FAANG Questions Part-1
+  tree_cp5: 'nHMQ33LZ6oA',  // Lec 63: Binary Tree FAANG Questions Part-1
+  tree_cp6: 'nHMQ33LZ6oA',  // Lec 63: Binary Tree FAANG Questions Part-1
+  tree_cp7: 's1d8UGDCCN8',  // Lec 64: Binary Tree FAANG Questions Part-2
+  tree_cp8: 's1d8UGDCCN8',  // Lec 64: Binary Tree FAANG Questions Part-2
+  tree_cp9: 's1d8UGDCCN8',  // Lec 64: Binary Tree FAANG Questions Part-2
+  tree_cp10: 'QG0hE0R_ng4', // Lec 65: Binary Tree FAANG Questions Part-3
+  tree_cp11: 'QG0hE0R_ng4', // Lec 65: Binary Tree FAANG Questions Part-3
+  tree_cp12: 'QG0hE0R_ng4', // Lec 65: Binary Tree FAANG Questions Part-3
+  tree_cp13: 'ffE1xj51EBQ', // Lec 66: Construct Binary Tree from Traversal
+  tree_cp14: 'ffE1xj51EBQ', // Lec 66: Construct Binary Tree from Traversal
+  tree_cp15: 'XLdpy0_6MR4', // Lec 67: Min Time to Burn Binary Tree
+  tree_cp16: 'XLdpy0_6MR4', // Lec 67: Min Time to Burn Binary Tree
+  tree_cp17: '2BdY9fixMrM', // Lec 68: Morris Traversal & Flatten to LL
+  tree_cp18: '2BdY9fixMrM', // Lec 68: Morris Traversal & Flatten to LL
+  tree_cp19: '5NiXlPrLslg', // Lec 62: Binary Trees & Traversals
+  tree_cp20: 'nHMQ33LZ6oA', // Lec 63: Binary Tree FAANG Questions Part-1
+  tree_cp21: 's1d8UGDCCN8', // Lec 64: Binary Tree FAANG Questions Part-2
+  tree_cp22: 'QG0hE0R_ng4', // Lec 65: Binary Tree FAANG Questions Part-3
+  tree_cp23: 'ffE1xj51EBQ', // Lec 66: Construct Binary Tree from Traversal
+  tree_cp24: 'XLdpy0_6MR4', // Lec 67: Min Time to Burn Binary Tree
+  tree_cp25: '2BdY9fixMrM', // Lec 68: Morris Traversal & Flatten to LL
+  tree_cp26: '5NiXlPrLslg', // Lec 62: Binary Trees & Traversals
+  tree_cp27: 'nHMQ33LZ6oA', // Lec 63: Binary Tree FAANG Questions Part-1
+  tree_cp28: 's1d8UGDCCN8', // Lec 64: Binary Tree FAANG Questions Part-2
+  tree_cp29: 'QG0hE0R_ng4', // Lec 65: Binary Tree FAANG Questions Part-3
+  tree_cp30: 'ffE1xj51EBQ', // Lec 66: Construct Binary Tree from Traversal
+  tree_cp31: 'XLdpy0_6MR4', // Lec 67: Min Time to Burn Binary Tree
+  tree_cp32: '2BdY9fixMrM', // Lec 68: Morris Traversal & Flatten to LL
+  tree_cp33: '5NiXlPrLslg', // Lec 62: Binary Trees & Traversals
+  tree_cp34: 'nHMQ33LZ6oA', // Lec 63: Binary Tree FAANG Questions Part-1
+  tree_cp35: 's1d8UGDCCN8', // Lec 64: Binary Tree FAANG Questions Part-2
+  tree_cp36: 'QG0hE0R_ng4', // Lec 65: Binary Tree FAANG Questions Part-3
+  tree_cp37: 'ffE1xj51EBQ', // Lec 66: Construct Binary Tree from Traversal
+  tree_cp38: 'XLdpy0_6MR4', // Lec 67: Min Time to Burn Binary Tree
+  tree_cp39: '2BdY9fixMrM', // Lec 68: Morris Traversal & Flatten to LL
+  tree_cp40: 'UeRUKRJvPa4', // Lec 69: BST & Implementation
+  tree_cp41: 'UeRUKRJvPa4', // Lec 69: BST & Implementation
+  tree_cp42: 'pDURIj98e0I', // Lec 70: BST FAANG Questions Part-1
+  tree_cp43: 'pDURIj98e0I', // Lec 70: BST FAANG Questions Part-1
+  tree_cp44: 'IGHyX15fLI8', // Lec 71: BST FAANG Questions Part-2
+  tree_cp45: 'IGHyX15fLI8', // Lec 71: BST FAANG Questions Part-2
+  tree_cp46: '18w8VduomfI', // Lec 72: Merge 2 BSTs
+  tree_cp47: '18w8VduomfI', // Lec 72: Merge 2 BSTs
+  tree_cp48: 'fqx8z3VepMA', // Lec 73: Largest BST in Binary Tree
+  tree_cp49: 'fqx8z3VepMA', // Lec 73: Largest BST in Binary Tree
+  tree_cp50: 'UeRUKRJvPa4', // Lec 69: BST & Implementation
+  tree_cp51: 'pDURIj98e0I', // Lec 70: BST FAANG Questions Part-1
+  tree_cp52: 'IGHyX15fLI8', // Lec 71: BST FAANG Questions Part-2
+  tree_cp53: '18w8VduomfI', // Lec 72: Merge 2 BSTs
+  tree_cp54: 'fqx8z3VepMA', // Lec 73: Largest BST in Binary Tree
 
-  // Graphs
-  graph_cp1: 'M3_pLsDdeuU',
-  graph_cp2: 'M3_pLsDdeuU',
-  graph_cp3: 'M3_pLsDdeuU',
-  graph_cp4: 'M3_pLsDdeuU',
-  graph_cp5: 'M3_pLsDdeuU',
-  graph_cp6: 'M3_pLsDdeuU',
-  graph_cp7: 'M3_pLsDdeuU',
-  graph_cp8: 'M3_pLsDdeuU',
-  graph_cp9: 'M3_pLsDdeuU',
-  graph_cp10: 'M3_pLsDdeuU',
-  graph_cp11: 'M3_pLsDdeuU',
-  graph_cp12: 'M3_pLsDdeuU',
-  graph_cp13: 'M3_pLsDdeuU',
-  graph_cp14: 'M3_pLsDdeuU',
-  graph_cp15: 'M3_pLsDdeuU',
-  graph_cp16: 'M3_pLsDdeuU',
-  graph_cp17: 'M3_pLsDdeuU',
-  graph_cp18: 'M3_pLsDdeuU',
-  graph_cp19: 'M3_pLsDdeuU',
-  graph_cp20: 'M3_pLsDdeuU',
-  graph_cp21: 'M3_pLsDdeuU',
-  graph_cp22: 'M3_pLsDdeuU',
-  graph_cp23: 'M3_pLsDdeuU',
-  graph_cp24: 'M3_pLsDdeuU',
-  graph_cp25: 'M3_pLsDdeuU',
-  graph_cp26: 'M3_pLsDdeuU',
-  graph_cp27: 'M3_pLsDdeuU',
-  graph_cp28: 'M3_pLsDdeuU',
-  graph_cp29: 'M3_pLsDdeuU',
-  graph_cp30: 'M3_pLsDdeuU',
-  graph_cp31: 'M3_pLsDdeuU',
-  graph_cp32: 'V6H1qAeB-l4',
-  graph_cp33: 'V6H1qAeB-l4',
-  graph_cp34: 'V6H1qAeB-l4',
-  graph_cp35: 'V6H1qAeB-l4',
-  graph_cp36: 'V6H1qAeB-l4',
-  graph_cp37: 'V6H1qAeB-l4',
-  graph_cp38: 'V6H1qAeB-l4',
-  graph_cp39: 'V6H1qAeB-l4',
-  graph_cp40: 'V6H1qAeB-l4',
-  graph_cp41: '0vVofAhAYjc',
-  graph_cp42: '0vVofAhAYjc',
-  graph_cp43: '0vVofAhAYjc',
-  graph_cp44: 'mJcZjjKzeqk',
-  graph_cp45: 'mJcZjjKzeqk',
-  graph_cp46: 'DMnDM_sxVig',
-  graph_cp47: 'DMnDM_sxVig',
-  graph_cp48: 'DMnDM_sxVig',
-  graph_cp49: 'DMnDM_sxVig',
-  graph_cp50: 'DMnDM_sxVig',
-  graph_cp51: 'DMnDM_sxVig',
-  graph_cp52: 'DMnDM_sxVig',
-  graph_cp53: 'DMnDM_sxVig',
-  graph_cp54: 'R6uoSjZ2imo',
-  graph_cp55: 'qrAub5z8FeA',
-  graph_cp56: 'j1QDfU21iZk',
+  // ─── Graphs (graph_cp1 - graph_cp56) ─────────────────────────────────────────
+  // Covers Lectures 85-101 (Graphs comprehensive)
+  graph_cp1: 'EaK6aslcC5g',  // Lec 85: Introduction to Graphs
+  graph_cp2: 'EaK6aslcC5g',  // Lec 85: Introduction to Graphs
+  graph_cp3: 'b5kij1Akf9I',  // Lec 86: BFS Traversal in Graph
+  graph_cp4: 'b5kij1Akf9I',  // Lec 86: BFS Traversal in Graph
+  graph_cp5: 'aJa3U-hydXc',  // Lec 87: DFS Traversal in Graph
+  graph_cp6: 'aJa3U-hydXc',  // Lec 87: DFS Traversal in Graph
+  graph_cp7: '1cSzxlhxOw8',  // Lec 88: Cycle Detection in Undirected Graphs
+  graph_cp8: '1cSzxlhxOw8',  // Lec 88: Cycle Detection in Undirected Graphs
+  graph_cp9: 'Tl5qbEmEQyY',  // Lec 89: Cycle Detection in Directed Graphs
+  graph_cp10: 'Tl5qbEmEQyY', // Lec 89: Cycle Detection in Directed Graphs
+  graph_cp11: 'T_boOrr0rvk', // Lec 90: Topological Sort (DFS)
+  graph_cp12: 'T_boOrr0rvk', // Lec 90: Topological Sort (DFS)
+  graph_cp13: '6XmzL04mlgQ', // Lec 91: Topological Sort (Kahn's Algorithm)
+  graph_cp14: '6XmzL04mlgQ', // Lec 91: Topological Sort (Kahn's Algorithm)
+  graph_cp15: 'X2_tYUuthH8', // Lec 92: Cycle Detection in Directed Graph (BFS)
+  graph_cp16: 'X2_tYUuthH8', // Lec 92: Cycle Detection in Directed Graph (BFS)
+  graph_cp17: 'abIEXKFpLNE', // Lec 93: Shortest Path in Undirected Graphs
+  graph_cp18: 'abIEXKFpLNE', // Lec 93: Shortest Path in Undirected Graphs
+  graph_cp19: 'P_bfy0LOU5g', // Lec 94: Shortest Path in DAG
+  graph_cp20: 'P_bfy0LOU5g', // Lec 94: Shortest Path in DAG
+  graph_cp21: 'dVUR3Rm6biE', // Lec 95: Dijkstra's Algorithm
+  graph_cp22: 'dVUR3Rm6biE', // Lec 95: Dijkstra's Algorithm
+  graph_cp23: 'rnYBi9N_vw4', // Lec 96: Prim's Algorithm (MST)
+  graph_cp24: 'rnYBi9N_vw4', // Lec 96: Prim's Algorithm (MST)
+  graph_cp25: 'KxLtIrCyXwE', // Lec 97: Kruskal's Algorithm & Union Find
+  graph_cp26: 'KxLtIrCyXwE', // Lec 97: Kruskal's Algorithm & Union Find
+  graph_cp27: 'CiDPT1xMKI0', // Lec 98: Bridges in a Graph
+  graph_cp28: 'CiDPT1xMKI0', // Lec 98: Bridges in a Graph
+  graph_cp29: 'fqkqx6OBRDE', // Lec 99: Articulation Points
+  graph_cp30: 'fqkqx6OBRDE', // Lec 99: Articulation Points
+  graph_cp31: 'ndfjV_yHpgQ', // Lec 100: Kosaraju's Algorithm for SCC
+  graph_cp32: 'ndfjV_yHpgQ', // Lec 100: Kosaraju's Algorithm for SCC
+  graph_cp33: 'ijpVpsmpJtQ', // Lec 101: Bellman Ford Algorithm
+  graph_cp34: 'ijpVpsmpJtQ', // Lec 101: Bellman Ford Algorithm
+  graph_cp35: 'EaK6aslcC5g', // Lec 85: Introduction to Graphs
+  graph_cp36: 'b5kij1Akf9I', // Lec 86: BFS Traversal in Graph
+  graph_cp37: 'aJa3U-hydXc', // Lec 87: DFS Traversal in Graph
+  graph_cp38: '1cSzxlhxOw8', // Lec 88: Cycle Detection in Undirected Graphs
+  graph_cp39: 'Tl5qbEmEQyY', // Lec 89: Cycle Detection in Directed Graphs
+  graph_cp40: 'T_boOrr0rvk', // Lec 90: Topological Sort (DFS)
+  graph_cp41: 'dVUR3Rm6biE', // Lec 95: Dijkstra's Algorithm
+  graph_cp42: 'rnYBi9N_vw4', // Lec 96: Prim's Algorithm (MST)
+  graph_cp43: 'KxLtIrCyXwE', // Lec 97: Kruskal's Algorithm & Union Find
+  graph_cp44: 'CiDPT1xMKI0', // Lec 98: Bridges in a Graph
+  graph_cp45: 'fqkqx6OBRDE', // Lec 99: Articulation Points
+  graph_cp46: 'ndfjV_yHpgQ', // Lec 100: Kosaraju's Algorithm for SCC
+  graph_cp47: 'ijpVpsmpJtQ', // Lec 101: Bellman Ford Algorithm
+  graph_cp48: 'abIEXKFpLNE', // Lec 93: Shortest Path in Undirected Graphs
+  graph_cp49: 'P_bfy0LOU5g', // Lec 94: Shortest Path in DAG
+  graph_cp50: 'dVUR3Rm6biE', // Lec 95: Dijkstra's Algorithm
+  graph_cp51: '6XmzL04mlgQ', // Lec 91: Topological Sort (Kahn's Algorithm)
+  graph_cp52: 'X2_tYUuthH8', // Lec 92: Cycle Detection in Directed Graph (BFS)
+  graph_cp53: 'rnYBi9N_vw4', // Lec 96: Prim's Algorithm (MST)
+  graph_cp54: 'KxLtIrCyXwE', // Lec 97: Kruskal's Algorithm & Union Find
+  graph_cp55: 'ndfjV_yHpgQ', // Lec 100: Kosaraju's Algorithm for SCC
+  graph_cp56: 'ijpVpsmpJtQ', // Lec 101: Bellman Ford Algorithm
 
-  // DP
-  dp_cp1: 'tyB0ztf0DNY',
-  dp_cp2: 'mLfjzJsN8us',
-  dp_cp3: 'EgG3jsGoPvQ',
-  dp_cp4: 'EgG3jsGoPvQ',
-  dp_cp5: 'GrMBfJNk_NY',
-  dp_cp6: '3WaxQMELSkw',
-  dp_cp7: 'tyB0ztf0DNY',
-  dp_cp8: 'tyB0ztf0DNY',
-  dp_cp9: 'tyB0ztf0DNY',
-  dp_cp10: 'tyB0ztf0DNY',
-  dp_cp11: 'tyB0ztf0DNY',
-  dp_cp12: 'tyB0ztf0DNY',
-  dp_cp13: 'tyB0ztf0DNY',
-  dp_cp14: 'tyB0ztf0DNY',
-  dp_cp15: 'tyB0ztf0DNY',
-  dp_cp16: 'tyB0ztf0DNY',
-  dp_cp17: 'tyB0ztf0DNY',
-  dp_cp18: 'tyB0ztf0DNY',
-  dp_cp19: 'tyB0ztf0DNY',
-  dp_cp20: 'tyB0ztf0DNY',
-  dp_cp21: 'tyB0ztf0DNY',
-  dp_cp22: 'tyB0ztf0DNY',
-  dp_cp23: 'tyB0ztf0DNY',
-  dp_cp24: 'tyB0ztf0DNY',
-  dp_cp25: 'tyB0ztf0DNY',
-  dp_cp26: 'tyB0ztf0DNY',
-  dp_cp27: 'tyB0ztf0DNY',
-  dp_cp28: 'tyB0ztf0DNY',
-  dp_cp29: 'tyB0ztf0DNY',
-  dp_cp30: 'tyB0ztf0DNY',
-  dp_cp31: 'tyB0ztf0DNY',
-  dp_cp32: 'tyB0ztf0DNY',
-  dp_cp33: 'tyB0ztf0DNY',
-  dp_cp34: 'tyB0ztf0DNY',
-  dp_cp35: 'tyB0ztf0DNY',
-  dp_cp36: 'tyB0ztf0DNY',
-  dp_cp37: 'tyB0ztf0DNY',
-  dp_cp38: 'tyB0ztf0DNY',
-  dp_cp39: 'tyB0ztf0DNY',
-  dp_cp40: 'tyB0ztf0DNY',
-  dp_cp41: 'tyB0ztf0DNY',
-  dp_cp42: 'tyB0ztf0DNY',
-  dp_cp43: 'tyB0ztf0DNY',
-  dp_cp44: 'tyB0ztf0DNY',
-  dp_cp45: 'tyB0ztf0DNY',
-  dp_cp46: 'tyB0ztf0DNY',
-  dp_cp47: 'tyB0ztf0DNY',
-  dp_cp48: 'tyB0ztf0DNY',
-  dp_cp49: 'tyB0ztf0DNY',
-  dp_cp50: 'tyB0ztf0DNY',
-  dp_cp51: 'tyB0ztf0DNY',
-  dp_cp52: 'tyB0ztf0DNY',
-  dp_cp53: 'tyB0ztf0DNY',
-  dp_cp54: 'tyB0ztf0DNY',
-  dp_cp55: 'tyB0ztf0DNY',
-  dp_cp56: 'tyB0ztf0DNY',
+  // ─── DP (dp_cp1 - dp_cp56) ───────────────────────────────────────────────────
+  // Covers Lectures 102-139 (Dynamic Programming comprehensive)
+  dp_cp1: 'PGsgv6nXhLw',   // Lec 102: Intro to DP | Memoization | Tabulation
+  dp_cp2: 'S31W3kohFDk',   // Lec 103: Min Cost Climbing Stairs
+  dp_cp3: 'A3FHNCAkhxE',   // Lec 104: Minimum Number of Coins
+  dp_cp4: 'm9-H6AUBLgY',   // Lec 105: Max Sum of Non-Adjacent Elements
+  dp_cp5: 'Fe2GeXEzWM0',   // Lec 106: House Robbery Problem
+  dp_cp6: 'MFAAZW2znv8',   // Lec 107: Cut Rod into Segments
+  dp_cp7: 'NW-BLDQHFXk',   // Lec 108: Count Derangements
+  dp_cp8: '5eFh5CC-8KY',   // Lec 109: Painting Fence Algorithm
+  dp_cp9: 'xdPv2SZJLVI',   // Lec 110: 0/1 KnapSack Problem
+  dp_cp10: 'Wct0mN2SCRQ',  // Lec 111: Combination Sum IV
+  dp_cp11: 'aJTCcyPrPOA',  // Lec 112: Perfect Squares Problem
+  dp_cp12: 'oZ_xAIGCXw4',  // Lec 113: Min Cost for Tickets Part-1
+  dp_cp13: 'U5f__4we_Jc',  // Lec 114: Min Cost for Tickets Part-2
+  dp_cp14: 'MMr19RE7KYY',  // Lec 115: Largest Square area in Matrix
+  dp_cp15: 'Eo4G_LPCgX8',  // Lec 116: Min Score Triangulation of Polygon
+  dp_cp16: 'dvTTtzamEEo',  // Lec 117: Minimum Sideways Jump
+  dp_cp17: '_iGlRDLPLxM',  // Lec 118: Reducing Dishes
+  dp_cp18: 'MYHajVcnXSA',  // Lec 119: LIS + Russian Doll
+  dp_cp19: 'Ntzuz7XsdCI',  // Lec 120: Max Height by Stacking Cuboid
+  dp_cp20: 'QZ9edJ0JCPw',  // Lec 121: Pizza with 3n Slices
+  dp_cp21: 'XY297u8qRDI',  // Lec 122: Dice Rolls with Target Sum
+  dp_cp22: 'UGY7FMHt-M8',  // Lec 123: Partition Equal Subset Sum
+  dp_cp23: 'IeT9Qz_vqHo',  // Lec 124: Min Swaps to make Subsequences Increasing
+  dp_cp24: 'YaMcX7sem70',  // Lec 125: Longest Arithmetic Subsequence
+  dp_cp25: 'IOOFHFXenQU',  // Lec 126: Longest AP with Difference d
+  dp_cp26: 'ox7fOk3HjlA',  // Lec 127: Unique BSTs || Catalan Number
+  dp_cp27: 'x--bMzT1Xhk',  // Lec 128: Guess Number Higher or Lower
+  dp_cp28: 'LDiD9fr28tc',  // Lec 129: Min Cost Tree from Leaf Values
+  dp_cp29: 'BSRTUtvJSIk',  // Lec 130: Buy and Sell Stock Part 1
+  dp_cp30: 'dlKGCNVel6A',  // Lec 131: Buy and Sell Stock Part 2
+  dp_cp31: 'NW7XRzg3smo',  // Lec 132: Buy and Sell Stock Part 3
+  dp_cp32: 'tuhjovVtDII',  // Lec 133: Buy and Sell Stock Part 4
+  dp_cp33: 'KFqhgQeQAXc',  // Lec 134: Buy and Sell Stock Part 5
+  dp_cp34: 'y1b8pObvndA',  // Lec 135: Longest Common Subsequence
+  dp_cp35: 'U095bJJtW3w',  // Lec 136: Longest Palindromic Subsequence
+  dp_cp36: '8HEjwf28LyE',  // Lec 137: Edit Distance
+  dp_cp37: 'IPT6emqnxg8',  // Lec 138: Max Rectangle with all 1's
+  dp_cp38: 'OgovJ9CB0hI',  // Lec 139: Wildcard Pattern Matching
+  dp_cp39: 'PGsgv6nXhLw',  // Lec 102: Intro to DP
+  dp_cp40: 'S31W3kohFDk',  // Lec 103: Min Cost Climbing Stairs
+  dp_cp41: 'A3FHNCAkhxE',  // Lec 104: Minimum Number of Coins
+  dp_cp42: 'xdPv2SZJLVI',  // Lec 110: 0/1 KnapSack Problem
+  dp_cp43: 'MYHajVcnXSA',  // Lec 119: LIS + Russian Doll
+  dp_cp44: 'y1b8pObvndA',  // Lec 135: Longest Common Subsequence
+  dp_cp45: '8HEjwf28LyE',  // Lec 137: Edit Distance
+  dp_cp46: 'OgovJ9CB0hI',  // Lec 139: Wildcard Pattern Matching
+  dp_cp47: 'Fe2GeXEzWM0',  // Lec 106: House Robbery Problem
+  dp_cp48: 'MFAAZW2znv8',  // Lec 107: Cut Rod into Segments
+  dp_cp49: 'Wct0mN2SCRQ',  // Lec 111: Combination Sum IV
+  dp_cp50: 'MMr19RE7KYY',  // Lec 115: Largest Square area in Matrix
+  dp_cp51: 'BSRTUtvJSIk',  // Lec 130: Buy and Sell Stock Part 1
+  dp_cp52: 'dlKGCNVel6A',  // Lec 131: Buy and Sell Stock Part 2
+  dp_cp53: 'U095bJJtW3w',  // Lec 136: Longest Palindromic Subsequence
+  dp_cp54: 'IPT6emqnxg8',  // Lec 138: Max Rectangle with all 1's
+  dp_cp55: 'm9-H6AUBLgY',  // Lec 105: Max Sum of Non-Adjacent Elements
+  dp_cp56: 'NW-BLDQHFXk',  // Lec 108: Count Derangements
 
-  // Greedy
-  greedy_cp1: 'n59vC9nJreU',
-  greedy_cp2: 'n59vC9nJreU',
-  greedy_cp3: 'n59vC9nJreU',
-  greedy_cp4: 'n59vC9nJreU',
-  greedy_cp5: 'n59vC9nJreU',
-  greedy_cp6: 'n59vC9nJreU',
-  greedy_cp7: 'n59vC9nJreU',
-  greedy_cp8: 'n59vC9nJreU',
-  greedy_cp9: 'n59vC9nJreU',
-  greedy_cp10: 'n59vC9nJreU',
-  greedy_cp11: 'n59vC9nJreU',
-  greedy_cp12: 'n59vC9nJreU',
-  greedy_cp13: 'n59vC9nJreU'
+  // ─── Greedy (greedy_cp1 - greedy_cp13) ───────────────────────────────────────
+  // Only 1 greedy video in the playlist (Lec 140)
+  greedy_cp1: 'HZOUwKCKF5o',  // Lec 140: Greedy Algorithms in 1 Video
+  greedy_cp2: 'HZOUwKCKF5o',  // Lec 140: Greedy Algorithms in 1 Video
+  greedy_cp3: 'HZOUwKCKF5o',  // Lec 140: Greedy Algorithms in 1 Video
+  greedy_cp4: 'HZOUwKCKF5o',  // Lec 140: Greedy Algorithms in 1 Video
+  greedy_cp5: 'HZOUwKCKF5o',  // Lec 140: Greedy Algorithms in 1 Video
+  greedy_cp6: 'HZOUwKCKF5o',  // Lec 140: Greedy Algorithms in 1 Video
+  greedy_cp7: 'HZOUwKCKF5o',  // Lec 140: Greedy Algorithms in 1 Video
+  greedy_cp8: 'HZOUwKCKF5o',  // Lec 140: Greedy Algorithms in 1 Video
+  greedy_cp9: 'HZOUwKCKF5o',  // Lec 140: Greedy Algorithms in 1 Video
+  greedy_cp10: 'HZOUwKCKF5o', // Lec 140: Greedy Algorithms in 1 Video
+  greedy_cp11: 'HZOUwKCKF5o', // Lec 140: Greedy Algorithms in 1 Video
+  greedy_cp12: 'HZOUwKCKF5o', // Lec 140: Greedy Algorithms in 1 Video
+  greedy_cp13: 'HZOUwKCKF5o'  // Lec 140: Greedy Algorithms in 1 Video
 };
 
 const apnaCheckpointVideos = {

@@ -6,7 +6,7 @@ export const getHashingCheckpointContent = (checkpointId, lang = 'cpp') => {
     hash_cp1: {
       title: 'Hashing Introduction',
       subtitle: 'Understand the basics of Hashing, HashMaps, and unordered maps.',
-      videoEmbedUrl: 'https://www.youtube.com/embed/KEs5UyBJ39g?rel=0&modestbranding=1',
+      videoEmbedUrl: 'https://www.youtube.com/embed/7mUKGHznpfg?rel=0&modestbranding=1',
       challenges: {
         cpp: { title: 'Implement Concept', desc: 'Sandbox for Hashing', functionName: 'solve', testCases: [{input: '"test"', expected: '1'}], bp: 'int solve() { return 1; }', sol: 'int solve() { return 1; }', hints: [] },
         java: { title: 'Implement Concept', desc: 'Sandbox for Hashing', functionName: 'solve', testCases: [{input: '"test"', expected: '1'}], bp: 'public class Solution { public static int solve() { return 1; } }', sol: 'public static int solve() { return 1; }', hints: [] },
@@ -17,7 +17,7 @@ export const getHashingCheckpointContent = (checkpointId, lang = 'cpp') => {
     hash_cp2: {
       title: 'Count frequencies of elements',
       subtitle: 'Learn how to count frequencies of array elements efficiently using Maps.',
-      videoEmbedUrl: 'https://www.youtube.com/embed/KEs5UyBJ39g?start=850&rel=0&modestbranding=1',
+      videoEmbedUrl: 'https://www.youtube.com/embed/7mUKGHznpfg?start=850&rel=0&modestbranding=1',
       challenges: {
         cpp: { title: 'Implement Concept', desc: 'Sandbox for Hashing', functionName: 'solve', testCases: [{input: '"test"', expected: '1'}], bp: 'int solve() { return 1; }', sol: 'int solve() { return 1; }', hints: [] },
         java: { title: 'Implement Concept', desc: 'Sandbox for Hashing', functionName: 'solve', testCases: [{input: '"test"', expected: '1'}], bp: 'public class Solution { public static int solve() { return 1; } }', sol: 'public static int solve() { return 1; }', hints: [] },
@@ -28,7 +28,7 @@ export const getHashingCheckpointContent = (checkpointId, lang = 'cpp') => {
     hash_cp3: {
       title: 'Highest/Lowest Frequency Elements',
       subtitle: 'Apply Hashing to find the elements with highest and lowest frequency.',
-      videoEmbedUrl: 'https://www.youtube.com/embed/KEs5UyBJ39g?start=1500&rel=0&modestbranding=1',
+      videoEmbedUrl: 'https://www.youtube.com/embed/7mUKGHznpfg?start=1500&rel=0&modestbranding=1',
       challenges: {
         cpp: { title: 'Implement Concept', desc: 'Sandbox for Hashing', functionName: 'solve', testCases: [{input: '"test"', expected: '1'}], bp: 'int solve() { return 1; }', sol: 'int solve() { return 1; }', hints: [] },
         java: { title: 'Implement Concept', desc: 'Sandbox for Hashing', functionName: 'solve', testCases: [{input: '"test"', expected: '1'}], bp: 'public class Solution { public static int solve() { return 1; } }', sol: 'public static int solve() { return 1; }', hints: [] },

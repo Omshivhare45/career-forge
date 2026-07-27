@@ -467,3 +467,141 @@ h1, h2, h3, h4, h5, h6 {
   background-clip: text;
   display: inline-block;
 }
+
+/* Glass Navigation */
+.glass-nav {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-nav-subtle {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass-nav-subtle {
+  background: rgba(24, 24, 27, 0.55);
+  border: 1px solid rgba(63, 63, 70, 0.5);
+}
+
+/* Floating Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-12px) rotate(1deg); }
+  66% { transform: translateY(-6px) rotate(-1deg); }
+}
+
+@keyframes floatSubtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  25% { transform: translateY(-16px) translateX(8px); }
+  50% { transform: translateY(-8px) translateX(-4px); }
+  75% { transform: translateY(-20px) translateX(6px); }
+}
+
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+
+.animate-float-subtle {
+  animation: floatSubtle 3s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: floatSlow 8s ease-in-out infinite;
+}
+
+.animate-float-delay-1 { animation-delay: 0.5s; }
+.animate-float-delay-2 { animation-delay: 1s; }
+.animate-float-delay-3 { animation-delay: 1.5s; }
+
+/* DSA Code Editor Panel */
+.editor-panel {
+  background: #1e1e1e;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.editor-toolbar {
+  background: linear-gradient(180deg, #2d2d30 0%, #252526 100%);
+  border-bottom: 1px solid #3e3e42;
+}
+
+.editor-run-btn {
+  background: linear-gradient(135deg, #2d7d46 0%, #10b981 100%);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+  transition: all 0.2s ease;
+}
+
+.editor-run-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+}
+
+.editor-run-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* DSA Roadmap Cards */
+.dsa-card-float {
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dsa-card-float:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 20px 40px rgba(48, 141, 70, 0.12);
+}
+
+/* ─── Workspace Dragging State ─────────────────────────────── */
+/* Replaces inline <style> injection for better performance */
+.workspace-dragging iframe {
+  pointer-events: none !important;
+}
+
+.workspace-dragging,
+.workspace-dragging * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  cursor: col-resize !important;
+}
+
+/* ─── Code Editor Premium Effects ──────────────────────────── */
+.editor-glow {
+  position: relative;
+  transition: box-shadow 0.3s ease;
+}
+
+.editor-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition: box-shadow 0.3s ease;
+}
+
+.editor-glow:focus-within::before {
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 0 1px rgba(48, 141, 70, 0.15),
+    0 0 20px rgba(48, 141, 70, 0.05);
+}
+
+/* ─── Split Pane Transitions ───────────────────────────────── */
+.split-pane-transition {
+  transition: width 0.15s ease-out;
+}
+
+.workspace-dragging .split-pane-transition {
+  transition: none;
+}

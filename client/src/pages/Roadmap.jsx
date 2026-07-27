@@ -57,6 +57,7 @@ const Roadmap = () => {
   const [domainData, setDomainData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeLevel, setActiveLevel] = useState(null);
+  const [dsaInstructor, setDsaInstructor] = useState('striver');
 
   // Dynamic language selection state synced with local cache
   const [selectedLang, setSelectedLang] = useState(() => normalizeDsaLanguage(localStorage.getItem('dsa_lang') || 'cpp'));
@@ -334,155 +335,9 @@ const Roadmap = () => {
   return (
     <div className="pb-20 max-w-6xl mx-auto px-6 pt-10 transition-colors duration-300">
       
-      {/* Premium Gamification Header */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 animate-fade-in">
-        <div className="card p-6 bg-[var(--bg-card)] flex items-center gap-5 border-b-4 border-amber-400">
-          <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center text-2xl text-amber-500 shadow-inner">
-            <FiZap fill="currentColor" />
-          </div>
-          <div>
-            <div className="text-[10px] font-black text-[var(--text-light)] uppercase tracking-wider">Experience Points</div>
-            <div className="text-2xl font-black text-[var(--text-main)]">{currentXP} XP</div>
-          </div>
-        </div>
-        
-        <div className="card p-6 bg-[var(--bg-card)] flex items-center gap-5 border-b-4 border-emerald-400">
-          <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-2xl text-emerald-500 shadow-inner">
-            <FiTrendingUp />
-          </div>
-          <div>
-            <div className="text-[10px] font-black text-[var(--text-light)] uppercase tracking-wider">Daily Streak</div>
-            <div className="text-2xl font-black text-[var(--text-main)]">{currentStreak} 🔥</div>
-          </div>
-        </div>
-        
-        <div className="card p-6 bg-[var(--bg-card)] flex items-center gap-5 border-b-4 border-indigo-400">
-          <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-2xl text-[var(--primary)] shadow-inner">
-            <FiStar />
-          </div>
-          <div>
-            <div className="text-[10px] font-black text-[var(--text-light)] uppercase tracking-wider">Current Rank</div>
-            <div className="text-2xl font-black text-[var(--text-main)]">
-              {isDSA ? (dsaLevelNames[activeDomainProgress.currentPhase ?? 0] || 'Apprentice') : (phases.find(p => p.phaseNumber === (activeDomainProgress.currentPhase ?? 0))?.name || 'Apprentice')}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Main Roadmap Description */}
-      <div className="text-center mb-12">
-        <div className={`inline-flex items-center gap-2 px-4 py-2 bg-[var(--primary-light)] text-[var(--primary)] rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-[var(--border)]`}>
-          <FiZap /> {isDSA ? `${dsaAnalysis.roadmapType} • ${dsaAnalysis.recommendedPace}` : (user.profile?.roadmapType || 'Steady Pace')} • {isDSA ? dsaAnalysis.estimatedTimeline : (user.profile?.estimatedTimeline || '6 Months')}
-        </div>
-        <h1 className="text-4xl md:text-5xl font-black mb-4 text-gradient tracking-tight">
-          {isDSA ? 'The Ultimate DSA Journey' : `Your ${domain.name} Adventure`}
-        </h1>
-        <p className="text-[var(--text-muted)] max-w-2xl mx-auto text-sm font-bold leading-relaxed">
-          {isDSA 
-            ? dsaAnalysis.aiSummary
-            : (user.profile?.aiSummary || "Master each level to unlock the next chapter of your coding journey.")}
-        </p>
-      </div>
 
-      {isDSA && (
-        <div className="grid lg:grid-cols-4 gap-4 mb-12">
-          {[
-            ['AI Start Point', `Level ${dsaAnalysis.startingLevel}: ${dsaAnalysis.startLevelName}`],
-            ['Detected Skill', dsaAnalysis.skillLevel],
-            ['Current Badge', activeBadge.name],
-            ['Streak Rank', `${streakRank.name} • ${streakRank.next}`]
-          ].map(([label, value]) => (
-            <div key={label} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm">
-              <div className="text-[9px] font-black uppercase tracking-widest text-[var(--text-light)] mb-2">{label}</div>
-              <div className="text-sm font-black text-[var(--text-main)] leading-snug">{value}</div>
-            </div>
-          ))}
-          <div className="lg:col-span-4 bg-[var(--brand-purple)] text-white rounded-2xl p-6 shadow-[var(--shadow-soft)]">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="text-[9px] font-black uppercase tracking-widest text-purple-200 mb-2">AI Recommendations</div>
-                <p className="text-sm text-white font-bold leading-relaxed">
-                  {dsaAnalysis.startReason} Focus next on {dsaAnalysis.weakTopics[0] || 'Arrays'}, keep lessons in {langNames[selectedLang]}, and complete the Watch, Notes, Dry Run, Practice, Challenge loop before unlocking the next topic.
-                </p>
-              </div>
-              <div className="shrink-0 grid grid-cols-2 gap-2 text-center">
-                <div className="bg-[var(--bg-card)]/20 border border-white/20 rounded-xl p-3">
-                  <div className="text-[8px] font-black text-purple-100 uppercase">Strongest</div>
-                  <div className="text-xs font-black text-white">{dsaAnalysis.strongestTopic}</div>
-                </div>
-                <div className="bg-[var(--bg-card)]/20 border border-white/20 rounded-xl p-3">
-                  <div className="text-[8px] font-black text-purple-100 uppercase">Weak Topic</div>
-                  <div className="text-xs font-black text-white">{dsaAnalysis.weakTopics[0] || 'Recursion'}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Interactive Language Selector for DSA ROADMAP */}
-      {isDSA && (
-        <div className="card p-6 mb-12 border-amber-500/20 max-w-2xl mx-auto relative overflow-hidden bg-gradient-to-r from-[var(--bg-card)] via-[var(--bg-sub)] to-[var(--bg-card)]">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-10">
-            <div>
-              <h3 className="text-sm font-black text-[var(--text-main)] flex items-center gap-2">
-                <FiCode className="text-amber-500 text-lg" /> Selected Language Option
-              </h3>
-              <p className="text-[10px] text-[var(--text-light)] font-bold uppercase mt-1 tracking-wider">
-                Current: <span className="text-amber-500">{langNames[selectedLang] || 'C++'}</span>
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-1 bg-[var(--bg-sub)] p-1 rounded-xl border border-[var(--border)] shadow-inner">
-              {['cpp', 'java', 'python', 'javascript'].map((lang) => (
-                <button
-                  key={lang}
-                  onClick={() => setSelectedLang(normalizeDsaLanguage(lang))}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
-                    selectedLang === lang 
-                      ? 'bg-amber-500 text-white shadow-sm' 
-                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                  }`}
-                >
-                  {lang === 'cpp' ? 'C++' : lang === 'javascript' ? 'JS' : lang}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Optional Striver Advanced Track Toggle */}
-          {(selectedLang === 'cpp' || selectedLang === 'java') && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="mt-5 border-t border-[var(--border)] pt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 relative z-10"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold">🇬🇧</div>
-                <div>
-                  <div className="text-xs font-black text-[var(--text-main)]">
-                    Comfortable learning in English?
-                  </div>
-                  <div className="text-[9px] font-semibold text-[var(--text-light)]">
-                    Unlock Striver's Advanced DSA Track as an optional learning overlay.
-                  </div>
-                </div>
-              </div>
-              
-              <button
-                onClick={() => setUseStriverAdvanced(!useStriverAdvanced)}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow border ${
-                  useStriverAdvanced 
-                    ? 'bg-amber-500 border-amber-500 text-white' 
-                    : 'bg-[var(--bg-sub)] border-[var(--border)] text-[var(--text-main)] hover:bg-[var(--bg-card)]'
-                }`}
-              >
-                {useStriverAdvanced ? 'Striver Mode Active 🏆' : 'Try Striver Track'}
-              </button>
-            </motion.div>
-          )}
-        </div>
-      )}
 
       {/* Segmented View Switcher */}
       {isDSA && (
@@ -604,57 +459,80 @@ const Roadmap = () => {
             >
               <div className="absolute top-[-20%] left-[-20%] w-64 h-64 bg-[var(--primary)]/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-              <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-8 pb-8 border-b border-[var(--border)] relative z-10">
-                <div className="flex-1">
-                  <div className="flex items-center gap-4 mb-4">
-                    <span className="text-5xl bg-[var(--bg-sub)] border border-[var(--border)] w-16 h-16 flex items-center justify-center rounded-2xl shadow-inner shrink-0">
-                      {getLevelIcon(activePhase ? phases.indexOf(activePhase) : 0, domain.slug)}
-                    </span>
-                    <div>
-                      <h2 className="text-3xl font-black text-[var(--text-main)] tracking-tight">
-                        {isDSA ? (dsaLevelNames[activeLevel] || activePhase?.name || 'Level') : (activePhase?.name || 'Level')}
-                      </h2>
-                      <div className="text-[var(--primary)] font-black text-xs tracking-widest uppercase mt-0.5">Level {activeLevel} Expedition</div>
-                    </div>
-                  </div>
-                  <p className="text-[var(--text-muted)] leading-relaxed max-w-2xl font-semibold text-sm">
-                    {activePhase?.description || "Complete these challenges to master this level and earn massive XP rewards."}
-                  </p>
-                </div>
-                
-                {/* Rewards Pill & Skip Level Actions */}
-                <div className="flex flex-col gap-4 shrink-0 w-full md:w-auto">
-                  <div className="bg-[var(--bg-sub)] border border-[var(--border)] p-5 rounded-2xl shadow-sm w-full">
-                    <div className="text-[9px] font-black text-[var(--primary)] uppercase tracking-widest mb-3">Completion Rewards</div>
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-3 text-[var(--text-main)] font-black text-sm">
-                        <div className="w-7 h-7 bg-amber-500/10 text-amber-500 rounded-lg flex items-center justify-center"><FiZap /></div>
-                        +500 XP
-                      </div>
-                      <div className="flex items-center gap-3 text-[var(--text-main)] font-black text-sm">
-                        <div className="w-7 h-7 bg-indigo-500/10 text-[var(--primary)] rounded-lg flex items-center justify-center"><FiAward /></div>
-                        Master Badge
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-8 lg:gap-12 relative z-10">
+                {/* Left Side: Title and Rewards */}
+                <div className="flex flex-col gap-6 lg:border-r border-[var(--border)] lg:pr-8">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-4 mb-4">
+                      <span className="text-5xl bg-[var(--bg-sub)] border border-[var(--border)] w-16 h-16 flex items-center justify-center rounded-2xl shadow-inner shrink-0">
+                        {getLevelIcon(activePhase ? phases.indexOf(activePhase) : 0, domain.slug)}
+                      </span>
+                      <div>
+                        <h2 className="text-3xl font-black text-[var(--text-main)] tracking-tight">
+                          {isDSA ? (dsaLevelNames[activeLevel] || activePhase?.name || 'Level') : (activePhase?.name || 'Level')}
+                        </h2>
+                        <div className="text-[var(--primary)] font-black text-xs tracking-widest uppercase mt-0.5">Level {activeLevel} Expedition</div>
                       </div>
                     </div>
+                    <p className="text-[var(--text-muted)] leading-relaxed max-w-2xl font-semibold text-sm">
+                      {activePhase?.description || "Complete these challenges to master this level and earn massive XP rewards."}
+                    </p>
                   </div>
+                  
+                  {/* Rewards Pill & Skip Level Actions */}
+                  <div className="flex flex-col gap-4 w-full">
+                    <div className="bg-[var(--bg-sub)] border border-[var(--border)] p-5 rounded-2xl shadow-sm w-full">
+                      <div className="text-[9px] font-black text-[var(--primary)] uppercase tracking-widest mb-3">Completion Rewards</div>
+                      <div className="space-y-2.5">
+                        <div className="flex items-center gap-3 text-[var(--text-main)] font-black text-sm">
+                          <div className="w-7 h-7 bg-amber-500/10 text-amber-500 rounded-lg flex items-center justify-center"><FiZap /></div>
+                          +500 XP
+                        </div>
+                        <div className="flex items-center gap-3 text-[var(--text-main)] font-black text-sm">
+                          <div className="w-7 h-7 bg-indigo-500/10 text-[var(--primary)] rounded-lg flex items-center justify-center"><FiAward /></div>
+                          Master Badge
+                        </div>
+                      </div>
+                    </div>
 
-                  {activeLevel === (activeDomainProgress.currentPhase ?? 0) && (
-                    <button
-                      onClick={handleSkipLevel}
-                      className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[var(--bg-card)] hover:bg-[var(--bg-sub)] border-2 border-[var(--border)] text-[var(--text-main)] font-black text-xs tracking-wider uppercase transition duration-300 shadow-sm w-full"
-                    >
-                      ⏭️ Skip Whole Level
-                    </button>
+                    {activeLevel === (activeDomainProgress.currentPhase ?? 0) && (
+                      <button
+                        onClick={handleSkipLevel}
+                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[var(--bg-card)] hover:bg-[var(--bg-sub)] border-2 border-[var(--border)] text-[var(--text-main)] font-black text-xs tracking-wider uppercase transition duration-300 shadow-sm w-full"
+                      >
+                        ⏭️ Skip Whole Level
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Side: Topics List */}
+                <div className="flex flex-col">
+                  {isDSA && (
+                    <div className="flex items-center gap-3 mb-6 p-1.5 bg-[var(--bg-sub)] rounded-xl border border-[var(--border)] w-max">
+                      <button 
+                        onClick={() => setDsaInstructor('striver')}
+                        className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${dsaInstructor === 'striver' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+                      >
+                        Striver (A2Z)
+                      </button>
+                      <button 
+                        onClick={() => setDsaInstructor('babbar')}
+                        className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${dsaInstructor === 'babbar' ? 'bg-orange-500 text-white shadow-md' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+                      >
+                        Love Babbar
+                      </button>
+                    </div>
                   )}
+                  <TopicsList 
+                    phaseId={activePhase?._id} 
+                    isTopicCompleted={isTopicCompleted}
+                    activeLevel={activeLevel}
+                    isDSA={isDSA}
+                    dsaInstructor={dsaInstructor}
+                  />
                 </div>
               </div>
-
-              <TopicsList 
-                phaseId={activePhase?._id} 
-                isTopicCompleted={isTopicCompleted}
-                activeLevel={activeLevel}
-                isDSA={isDSA}
-              />
             </motion.div>
           )}
         </>
@@ -865,10 +743,10 @@ const Roadmap = () => {
                             href={q.yt} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="flex items-center justify-center w-9 h-9 rounded-xl bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white transition duration-200"
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500 text-white font-black text-xs uppercase tracking-wider hover:bg-rose-600 transition duration-200 shadow hover:shadow-md hover:scale-[1.01]"
                             title="Watch Video Tutorial Explanation"
                           >
-                            🎬
+                            <FiPlayCircle size={16} /> Play Video
                           </a>
                         )}
                         <button
@@ -1168,7 +1046,7 @@ const Roadmap = () => {
   );
 };
 
-const TopicsList = ({ phaseId, isTopicCompleted, activeLevel, isDSA }) => {
+const TopicsList = ({ phaseId, isTopicCompleted, activeLevel, isDSA, dsaInstructor }) => {
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -1190,9 +1068,15 @@ const TopicsList = ({ phaseId, isTopicCompleted, activeLevel, isDSA }) => {
     </div>
   );
 
+  const filteredTopics = isDSA && dsaInstructor 
+    ? topics.filter(t => dsaInstructor === 'babbar' ? t.instructor === 'Love Babbar' : t.instructor !== 'Love Babbar') 
+    : topics;
+
+  if (filteredTopics.length === 0) return <div className="text-center py-10 text-[var(--text-light)] italic">No missions found for this instructor in this level.</div>;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-      {topics.map((topic, i) => {
+      {filteredTopics.map((topic, i) => {
         const completed = isTopicCompleted(topic._id);
         
         return (
@@ -1209,7 +1093,7 @@ const TopicsList = ({ phaseId, isTopicCompleted, activeLevel, isDSA }) => {
               <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all duration-500 shrink-0 ${
                 completed 
                   ? 'bg-green-100 text-[var(--brand-green)] shadow-[var(--shadow-soft)]' 
-                  : 'bg-[var(--bg-sub)] text-[var(--text-light)] group-hover:bg-[var(--brand-green-light)] group-hover:text-[var(--brand-green)] group-hover:rotate-6'
+                  : 'bg-rose-500 text-white shadow-lg shadow-rose-500/30 group-hover:bg-rose-600 group-hover:scale-110 group-hover:rotate-6'
               }`}>
                 {completed ? <FiCheckCircle /> : <FiPlayCircle />}
               </div>

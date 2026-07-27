@@ -35,7 +35,18 @@ const ManageAcademics = () => {
   const [branchForm, setBranchForm] = useState({ name: '', code: '', isActive: false, order: 0 });
   const [subjectForm, setSubjectForm] = useState({ name: '', code: '', icon: '🎓', description: '', isActive: true, order: 0 });
   const [chapterForm, setChapterForm] = useState({ chapterNumber: 1, name: '', description: '', isActive: true, order: 0 });
-  const [videoForm, setVideoForm] = useState({ title: '', youtubeId: '', duration: 600, notesUrl: '', order: 0, isActive: true });
+  const [videoForm, setVideoForm] = useState({ 
+    title: '', 
+    description: '', 
+    videoType: 'drive', 
+    driveLink: '', 
+    thumbnail: '', 
+    duration: 600, 
+    notesUrl: '', 
+    order: 0, 
+    isPublished: true, 
+    chapterId: '' 
+  });
 
   useEffect(() => {
     fetchBaseData();
@@ -108,7 +119,7 @@ const ManageAcademics = () => {
   const fetchVideos = async () => {
     try {
       const res = await api.get(`/academics/videos?chapterId=${selectedChapter._id}`);
-      setVideos(res.data.data || []);
+      setVideos((res.data.data || []).sort((a, b) => a.order - b.order));
     } catch (e) {
       toast.error('Failed to load videos');
     }
@@ -129,7 +140,29 @@ const ManageAcademics = () => {
     } else if (type === 'chap') {
       setChapterForm(item ? { ...item } : { chapterNumber: chapters.length + 1, name: '', description: '', isActive: true, order: chapters.length + 1 });
     } else if (type === 'video') {
-      setVideoForm(item ? { ...item } : { title: '', youtubeId: '', duration: 600, notesUrl: '', order: videos.length + 1, isActive: true });
+      setVideoForm(item ? { 
+        title: item.title,
+        description: item.description || '',
+        videoType: item.videoType || 'drive',
+        driveLink: item.driveLink || '',
+        thumbnail: item.thumbnail || '',
+        duration: item.duration || 600,
+        notesUrl: item.notesUrl || '',
+        order: item.order || videos.length + 1,
+        isPublished: item.isPublished !== undefined ? item.isPublished : true,
+        chapterId: item.chapterId?._id || item.chapterId || selectedChapter._id
+      } : { 
+        title: '', 
+        description: '', 
+        videoType: 'drive', 
+        driveLink: '', 
+        thumbnail: '', 
+        duration: 600, 
+        notesUrl: '', 
+        order: videos.length + 1, 
+        isPublished: true,
+        chapterId: selectedChapter._id
+      });
     }
   };
 
@@ -161,7 +194,7 @@ const ManageAcademics = () => {
         payload = { ...chapterForm, subjectId: selectedSubject._id };
       } else if (modalType === 'video') {
         endpoint = modalMode === 'create' ? '/admin/academics/video' : `/admin/academics/video/${activeItem._id}`;
-        payload = { ...videoForm, chapterId: selectedChapter._id };
+        payload = { ...videoForm };
       }
 
       await api[method](endpoint, payload);
@@ -174,7 +207,11 @@ const ManageAcademics = () => {
       else if (modalType === 'branch') fetchBaseData();
       else if (modalType === 'subj') fetchSubjects();
       else if (modalType === 'chap') fetchChapters();
-      else if (modalType === 'video') fetchVideos();
+      else if (modalType === 'video') {
+        // If chapter assignment was changed, refresh subject's chapters and clear current selections
+        fetchVideos();
+        fetchChapters();
+      }
 
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to submit form');
@@ -265,7 +302,7 @@ const ManageAcademics = () => {
                   onClick={() => setSelectedBranch(br)}
                   className={`flex justify-between items-center px-3 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${selectedBranch?._id === br._id ? 'bg-[var(--primary)] text-white' : 'text-[var(--text-main)] hover:bg-[var(--bg-sub)]/30 border border-transparent hover:border-[var(--border)]'}`}
                 >
-                  <span className="truncate">{br.code} {branchForm.isActive ? '🟢' : ''}</span>
+                  <span className="truncate">{br.code} {br.isActive ? '🟢' : '🔴'}</span>
                   <div className="flex items-center gap-1.5">
                     <button onClick={(e) => { e.stopPropagation(); openModal('branch', 'edit', br); }} className="hover:text-amber-400 p-0.5"><FiEdit size={12} /></button>
                     <button onClick={(e) => { e.stopPropagation(); handleDelete('branch', br._id); }} className="hover:text-red-400 p-0.5"><FiTrash2 size={12} /></button>
@@ -396,10 +433,12 @@ const ManageAcademics = () => {
                       className="p-4 rounded-xl border border-[var(--border-light)] bg-[var(--bg-sub)]/10 flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded bg-red-100 text-red-600 flex items-center justify-center font-bold">▶</div>
+                        <div className="w-8 h-8 rounded bg-green-150 text-green-700 flex items-center justify-center font-bold text-lg">🎬</div>
                         <div>
                           <h4 className="font-black text-sm text-[var(--text-main)]">{vid.title}</h4>
-                          <span className="text-[9px] font-bold text-[var(--text-light)] uppercase tracking-wider">Duration: {Math.floor(vid.duration / 60)}m • YT: {vid.youtubeId}</span>
+                          <span className="text-[9px] font-bold text-[var(--text-light)] uppercase tracking-wider block mt-0.5">
+                            Duration: {Math.floor((vid.duration || 600) / 60)}m • {vid.videoType || 'drive'} • Order: {vid.order} • {vid.isPublished ? '🟢 Published' : '🔴 Draft'}
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -425,7 +464,7 @@ const ManageAcademics = () => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl w-full max-w-md p-6 space-y-6 shadow-2xl"
+              className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl w-full max-w-md p-6 space-y-6 shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar"
             >
               <h3 className="text-xl font-black text-[var(--text-main)] tracking-tight">
                 {modalMode === 'create' ? 'Create' : 'Edit'} {modalType.toUpperCase()}
@@ -438,7 +477,7 @@ const ManageAcademics = () => {
                   <>
                     <div>
                       <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Semester Number</label>
-                      <input type="number" required value={semForm.number} onChange={e => setSemForm({...semForm, number: parseInt(e.target.value)})} className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
+                      <input type="number" required value={semForm.number} onChange={e => setSemForm({...semForm, number: parseInt(e.target.value) || 0})} className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
                     </div>
                     <div>
                       <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Display Name</label>
@@ -446,7 +485,7 @@ const ManageAcademics = () => {
                     </div>
                     <div>
                       <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Order</label>
-                      <input type="number" value={semForm.order} onChange={e => setSemForm({...semForm, order: parseInt(e.target.value)})} className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
+                      <input type="number" value={semForm.order} onChange={e => setSemForm({...semForm, order: parseInt(e.target.value) || 0})} className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
                     </div>
                   </>
                 )}
@@ -456,15 +495,15 @@ const ManageAcademics = () => {
                   <>
                     <div>
                       <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Branch Code</label>
-                      <input type="text" required value={branchForm.code} onChange={e => setBranchForm({...branchForm, code: e.target.value})} placeholder="e.g. CSE" className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm animate-none" />
+                      <input type="text" required value={branchForm.code} onChange={e => setBranchForm({...branchForm, code: e.target.value})} placeholder="e.g. CSE" className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
                     </div>
                     <div>
                       <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Full Branch Name</label>
                       <input type="text" required value={branchForm.name} onChange={e => setBranchForm({...branchForm, name: e.target.value})} placeholder="e.g. Computer Science Engineering" className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
                     </div>
                     <div className="flex items-center gap-2 pt-2">
-                      <input type="checkbox" checked={branchForm.isActive} onChange={e => setBranchForm({...branchForm, isActive: e.target.checked})} className="w-4 h-4 rounded" />
-                      <span className="text-xs font-black text-[var(--text-main)] uppercase">Active (CSE content available)</span>
+                      <input type="checkbox" id="branchActive" checked={branchForm.isActive} onChange={e => setBranchForm({...branchForm, isActive: e.target.checked})} className="w-4 h-4 rounded" />
+                      <label htmlFor="branchActive" className="text-xs font-black text-[var(--text-main)] uppercase cursor-pointer">Active (Syllabus content visible)</label>
                     </div>
                   </>
                 )}
@@ -496,7 +535,7 @@ const ManageAcademics = () => {
                   <>
                     <div>
                       <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Chapter Number</label>
-                      <input type="number" required value={chapterForm.chapterNumber} onChange={e => setChapterForm({...chapterForm, chapterNumber: parseInt(e.target.value)})} className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
+                      <input type="number" required value={chapterForm.chapterNumber} onChange={e => setChapterForm({...chapterForm, chapterNumber: parseInt(e.target.value) || 0})} className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
                     </div>
                     <div>
                       <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Chapter Title</label>
@@ -517,20 +556,53 @@ const ManageAcademics = () => {
                       <input type="text" required value={videoForm.title} onChange={e => setVideoForm({...videoForm, title: e.target.value})} placeholder="e.g. Lecture 1: Big O Notation" className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
                     </div>
                     <div>
-                      <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">YouTube Video ID / URL</label>
-                      <input type="text" required value={videoForm.youtubeId} onChange={e => setVideoForm({...videoForm, youtubeId: e.target.value})} placeholder="e.g. EAR7De6Goz4" className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
+                      <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Description</label>
+                      <textarea value={videoForm.description} onChange={e => setVideoForm({...videoForm, description: e.target.value})} placeholder="Video description..." className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm h-16" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Video Provider</label>
+                        <select value={videoForm.videoType} onChange={e => setVideoForm({...videoForm, videoType: e.target.value})} className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm font-bold">
+                          <option value="drive">Google Drive</option>
+                          <option value="youtube">YouTube Unlisted</option>
+                          <option value="s3">AWS S3</option>
+                          <option value="cloudinary">Cloudinary</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Chapter Assignment</label>
+                        <select value={videoForm.chapterId} onChange={e => setVideoForm({...videoForm, chapterId: e.target.value})} className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm font-bold">
+                          {chapters.map(c => (
+                            <option key={c._id} value={c._id}>Chapter {c.chapterNumber}: {c.name.substring(0, 20)}...</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                     <div>
-                      <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Duration (seconds)</label>
-                      <input type="number" required value={videoForm.duration} onChange={e => setVideoForm({...videoForm, duration: parseInt(e.target.value)})} className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
+                      <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Google Drive Link / Video URL</label>
+                      <input type="text" required value={videoForm.driveLink} onChange={e => setVideoForm({...videoForm, driveLink: e.target.value})} placeholder="https://drive.google.com/file/d/FILE_ID/view?usp=sharing" className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Thumbnail URL</label>
+                      <input type="text" value={videoForm.thumbnail} onChange={e => setVideoForm({...videoForm, thumbnail: e.target.value})} placeholder="https://image-link.com/thumbnail.png" className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Duration (seconds)</label>
+                        <input type="number" required value={videoForm.duration} onChange={e => setVideoForm({...videoForm, duration: parseInt(e.target.value) || 0})} className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Display Order</label>
+                        <input type="number" required value={videoForm.order} onChange={e => setVideoForm({...videoForm, order: parseInt(e.target.value) || 0})} className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
+                      </div>
                     </div>
                     <div>
                       <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Notes URL (optional)</label>
                       <input type="text" value={videoForm.notesUrl} onChange={e => setVideoForm({...videoForm, notesUrl: e.target.value})} placeholder="Link to PDF notes..." className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
                     </div>
-                    <div>
-                      <label className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider block mb-1">Order</label>
-                      <input type="number" value={videoForm.order} onChange={e => setVideoForm({...videoForm, order: parseInt(e.target.value)})} className="w-full bg-[var(--bg-sub)] border border-[var(--border)] p-3 rounded-xl text-sm" />
+                    <div className="flex items-center gap-2 pt-2">
+                      <input type="checkbox" id="isPublished" checked={videoForm.isPublished} onChange={e => setVideoForm({...videoForm, isPublished: e.target.checked})} className="w-4 h-4 rounded accent-[var(--primary)]" />
+                      <label htmlFor="isPublished" className="text-xs font-black text-[var(--text-main)] uppercase select-none cursor-pointer">Published (Visible to students)</label>
                     </div>
                   </>
                 )}

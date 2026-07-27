@@ -381,10 +381,70 @@ exports.deleteChapter = async (req, res) => {
   }
 };
 
+// Helper: Parse Google Drive link and generate preview URL
+const parseDriveLink = (link) => {
+  if (!link) return { id: '', previewUrl: '' };
+  
+  // Format: /file/d/FILE_ID/view or /file/d/FILE_ID/preview
+  let match = link.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    return {
+      id: match[1],
+      previewUrl: `https://drive.google.com/file/d/${match[1]}/preview`
+    };
+  }
+
+  // Format: /open?id=FILE_ID
+  match = link.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    return {
+      id: match[1],
+      previewUrl: `https://drive.google.com/file/d/${match[1]}/preview`
+    };
+  }
+
+  // Generic fallback: /d/FILE_ID
+  match = link.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    return {
+      id: match[1],
+      previewUrl: `https://drive.google.com/file/d/${match[1]}/preview`
+    };
+  }
+
+  // If already a preview URL or cannot be parsed, use it directly
+  return { id: '', previewUrl: link };
+};
+
+// Helper: Populate subject, semester, and branch from chapter
+const resolveAcademicsHierarchy = async (payload) => {
+  if (payload.chapterId) {
+    const chapter = await AcademicChapter.findById(payload.chapterId);
+    if (chapter) {
+      payload.subjectId = chapter.subjectId;
+      const subject = await AcademicSubject.findById(chapter.subjectId);
+      if (subject) {
+        payload.semesterId = subject.semesterId;
+        payload.branchId = subject.branchId;
+      }
+    }
+  }
+};
+
 // --- VIDEOS ---
 exports.createVideo = async (req, res) => {
   try {
-    const video = await AcademicVideo.create(req.body);
+    const payload = { ...req.body };
+    await resolveAcademicsHierarchy(payload);
+
+    if (payload.videoType === 'drive' && payload.driveLink) {
+      const parsed = parseDriveLink(payload.driveLink);
+      payload.embedLink = parsed.previewUrl;
+    } else {
+      payload.embedLink = payload.driveLink; // Fallback
+    }
+
+    const video = await AcademicVideo.create(payload);
     res.status(201).json({ success: true, data: video });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -393,7 +453,17 @@ exports.createVideo = async (req, res) => {
 
 exports.updateVideo = async (req, res) => {
   try {
-    const video = await AcademicVideo.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const payload = { ...req.body };
+    await resolveAcademicsHierarchy(payload);
+
+    if (payload.videoType === 'drive' && payload.driveLink) {
+      const parsed = parseDriveLink(payload.driveLink);
+      payload.embedLink = parsed.previewUrl;
+    } else if (payload.driveLink) {
+      payload.embedLink = payload.driveLink;
+    }
+
+    const video = await AcademicVideo.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true });
     if (!video) return res.status(404).json({ success: false, message: 'Video not found' });
     res.json({ success: true, data: video });
   } catch (error) {

@@ -92,14 +92,21 @@ const seedAcademics = async () => {
         });
 
         for (let vidNum = 1; vidNum <= 5; vidNum++) {
-          const videoIdx = (chNum + vidNum) % ytVideoIds.length;
+          const fakeFileId = `TEMP_VIDEO_${subject.code}_C${chNum}_V${vidNum}`;
           await AcademicVideo.create({
             chapterId: chapter._id,
+            subjectId: subject._id,
+            semesterId: sem4._id,
+            branchId: cseBranch._id,
             title: `Lecture ${chNum}.${vidNum}: ${subject.code} Concept Video ${vidNum}`,
-            youtubeId: ytVideoIds[videoIdx],
+            description: `Concept lecture video covering key syllabus elements for Chapter ${chNum} of ${subject.name}.`,
+            videoType: 'drive',
+            driveLink: `https://drive.google.com/file/d/${fakeFileId}/view`,
+            embedLink: `https://drive.google.com/file/d/${fakeFileId}/preview`,
             duration: 600 + (vidNum * 120), // 10 to 18 mins
             notesUrl: 'https://github.com/RidamGupta19/career-forge', // Placeholder notes link
             order: vidNum,
+            isPublished: true,
             isActive: true
           });
         }

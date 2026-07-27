@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { FiChevronLeft, FiPlay, FiCheck, FiCheckCircle, FiFileText, FiArrowRight, FiBookOpen } from 'react-icons/fi';
+import { FiChevronLeft, FiPlay, FiCheck, FiFileText, FiArrowRight, FiBookOpen, FiVideo, FiAlertTriangle, FiArrowLeft } from 'react-icons/fi';
 import { FaGraduationCap } from 'react-icons/fa';
 
 const AcademicsChapterDetail = () => {
@@ -16,23 +16,7 @@ const AcademicsChapterDetail = () => {
   const [activeVideo, setActiveVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savingProgress, setSavingProgress] = useState(false);
-
-  const playerRef = useRef(null);
-  const timeTrackingRef = useRef({ lastSavedTime: 0, startTime: Date.now() });
-
-  // Load YouTube IFrame API script once
-  useEffect(() => {
-    if (!window.YT) {
-      const tag = document.createElement('script');
-      tag.src = "https://www.youtube.com/iframe_api";
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      if (firstScriptTag && firstScriptTag.parentNode) {
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-      } else {
-        document.head.appendChild(tag);
-      }
-    }
-  }, []);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   useEffect(() => {
     fetchChapterData();
@@ -40,7 +24,7 @@ const AcademicsChapterDetail = () => {
 
   const fetchChapterData = async () => {
     try {
-      // 1. Fetch semesters and branches to query subject later
+      // 1. Fetch semesters and branches
       const [semRes, branchRes] = await Promise.all([
         api.get('/academics/semesters'),
         api.get('/academics/branches')
@@ -51,10 +35,10 @@ const AcademicsChapterDetail = () => {
 
       // 2. Fetch videos in chapter
       const videosRes = await api.get(`/academics/videos?chapterId=${chapterId}`);
-      const fetchedVideos = videosRes.data.data || [];
+      const fetchedVideos = (videosRes.data.data || []).sort((a, b) => a.order - b.order);
       setVideos(fetchedVideos);
 
-      // 3. Find parent chapter
+      // 3. Find parent chapter and subject
       const chaptersList = await Promise.all(
         semesters.flatMap(sem =>
           branches.map(async (br) => {
@@ -78,14 +62,34 @@ const AcademicsChapterDetail = () => {
         setSubject(foundNode.subject);
       }
 
-      // Set first video as active if none is active
+      // Set active video
       if (fetchedVideos.length > 0) {
-        // Find last opened video if any, or default to first
+        // Query progress to find if there's a lastOpenedVideoId or partial timestamps
         const progressRes = await api.get(`/academics/progress?subjectId=${foundNode?.subject?._id}`);
-        const lastOpenedVideoId = progressRes?.data?.data?.lastOpenedVideoId;
-        const lastOpenedVid = fetchedVideos.find(v => v._id === lastOpenedVideoId);
+        const userProgress = progressRes?.data?.data || {};
         
-        setActiveVideo(lastOpenedVid || fetchedVideos[0]);
+        // Find last watch states for individual videos
+        const mappedVideos = fetchedVideos.map(v => {
+          const matchingProg = userProgress.watchedVideos?.find(wv => wv.videoId === v._id);
+          return {
+            ...v,
+            completed: matchingProg?.completed || false,
+            timestamp: matchingProg?.timestamp || 0,
+            watchPercentage: matchingProg?.watchPercentage || 0
+          };
+        });
+        setVideos(mappedVideos);
+
+        const lastOpenedVideoId = userProgress.lastOpenedVideoId;
+        const lastOpenedVid = mappedVideos.find(v => v._id === lastOpenedVideoId);
+        
+        const initialVideo = lastOpenedVid || mappedVideos[0];
+        setActiveVideo(initialVideo);
+        setElapsedTime(initialVideo.timestamp || 0);
+
+        if (initialVideo.timestamp > 0 && !initialVideo.completed) {
+          toast.success(`Resuming lecture from ${formatTime(initialVideo.timestamp)} ⚡`);
+        }
       }
     } catch (err) {
       toast.error('Failed to load chapter videos');
@@ -94,84 +98,50 @@ const AcademicsChapterDetail = () => {
     }
   };
 
-  // Helper to extract YouTube ID
-  const getYouTubeId = (urlOrId) => {
-    if (!urlOrId) return '';
-    if (urlOrId.length === 11) return urlOrId;
-    const match = urlOrId.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
-    return match ? match[1] : urlOrId;
-  };
-
-  // Setup YouTube player listener when active video changes
+  // Automated Watch Session Progress Tracker
   useEffect(() => {
     if (!activeVideo) return;
 
-    const ytId = getYouTubeId(activeVideo.youtubeId);
-    let checkYTInterval = setInterval(() => {
-      if (window.YT && window.YT.Player) {
-        clearInterval(checkYTInterval);
+    // Reset watch timer
+    setElapsedTime(activeVideo.timestamp || 0);
 
-        try {
-          if (playerRef.current) {
-            playerRef.current.destroy();
-            playerRef.current = null;
+    const interval = setInterval(() => {
+      // Increment only if tab/window has focus and video is not completed
+      if (document.hasFocus() && !activeVideo.completed) {
+        setElapsedTime(prev => {
+          const next = prev + 1;
+          const duration = activeVideo.duration || 600;
+          if (next >= duration) {
+            handleVideoCompletion();
+            clearInterval(interval);
+            return duration;
           }
-        } catch (e) {
-          console.warn("Error destroying previous player", e);
-        }
-
-        timeTrackingRef.current = { lastSavedTime: 0, startTime: Date.now() };
-
-        try {
-          playerRef.current = new window.YT.Player('academics-video-iframe', {
-            events: {
-              onStateChange: (event) => {
-                const currentTime = Math.round(event.target.getCurrentTime());
-                const duration = Math.round(event.target.getDuration());
-                const percent = duration > 0 ? Math.round((currentTime / duration) * 100) : 0;
-
-                // 0 is YT.PlayerState.ENDED
-                if (event.data === 0) {
-                  handleVideoCompletion();
-                }
-
-                // Periodically save video progress (when playing/paused)
-                if (event.data === 1 || event.data === 2) {
-                  const now = Date.now();
-                  const timeSpentDelta = Math.round((now - timeTrackingRef.current.startTime) / 1000);
-                  timeTrackingRef.current.startTime = now;
-
-                  if (currentTime - timeTrackingRef.current.lastSavedTime >= 5 || event.data === 2) {
-                    saveProgress(currentTime, percent, timeSpentDelta, false);
-                    timeTrackingRef.current.lastSavedTime = currentTime;
-                  }
-                }
-              },
-              onReady: (event) => {
-                // Seek to saved position if not completed and was partially watched
-                if (activeVideo.timestamp > 0 && !activeVideo.completed) {
-                  event.target.seekTo(activeVideo.timestamp, true);
-                  toast.success(`Resuming lecture from ${Math.floor(activeVideo.timestamp / 60)}m ${activeVideo.timestamp % 60}s ⚡`);
-                }
-              }
-            }
-          });
-        } catch (err) {
-          console.warn("Failed to instantiate YT.Player:", err);
-        }
+          return next;
+        });
       }
     }, 1000);
 
     return () => {
-      clearInterval(checkYTInterval);
-      if (playerRef.current) {
-        try {
-          playerRef.current.destroy();
-          playerRef.current = null;
-        } catch (e) {}
-      }
+      clearInterval(interval);
     };
   }, [activeVideo]);
+
+  // Periodic Backend Progress Sync (Every 10 seconds of active watching)
+  useEffect(() => {
+    if (!activeVideo || activeVideo.completed) return;
+    
+    if (elapsedTime > 0 && elapsedTime % 10 === 0) {
+      const duration = activeVideo.duration || 600;
+      const percent = Math.min(Math.round((elapsedTime / duration) * 100), 100);
+      saveProgress(elapsedTime, percent, 10, percent >= 100);
+    }
+  }, [elapsedTime]);
+
+  const formatTime = (secs) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}m ${s < 10 ? '0' : ''}${s}s`;
+  };
 
   const saveProgress = async (timestamp, watchPercentage, timeSpentDelta, completed) => {
     if (!subject || !chapter || !activeVideo || savingProgress) return;
@@ -186,11 +156,9 @@ const AcademicsChapterDetail = () => {
         completed
       });
       
-      // Update local state for active video completion
-      if (completed) {
-        setVideos(prev => prev.map(v => v._id === activeVideo._id ? { ...v, completed: true, watchPercentage: 100 } : v));
-        setActiveVideo(prev => prev ? { ...prev, completed: true, watchPercentage: 100 } : null);
-      }
+      // Update local state
+      setVideos(prev => prev.map(v => v._id === activeVideo._id ? { ...v, completed, timestamp, watchPercentage } : v));
+      setActiveVideo(prev => prev ? { ...prev, completed, timestamp, watchPercentage } : null);
     } catch (e) {
       console.warn("Failed to persist watch progress", e);
     }
@@ -208,7 +176,6 @@ const AcademicsChapterDetail = () => {
       setActiveVideo(nextVid);
     } else {
       toast.success("Congratulations! You completed the last lecture in this chapter! 🎉");
-      // Refresh list to see if chapter was marked complete
       fetchChapterData();
     }
   };
@@ -233,6 +200,20 @@ const AcademicsChapterDetail = () => {
     }
   };
 
+  const handleNextVideo = () => {
+    const currentIdx = videos.findIndex(v => v._id === activeVideo._id);
+    if (currentIdx !== -1 && currentIdx < videos.length - 1) {
+      setActiveVideo(videos[currentIdx + 1]);
+    }
+  };
+
+  const handlePrevVideo = () => {
+    const currentIdx = videos.findIndex(v => v._id === activeVideo._id);
+    if (currentIdx !== -1 && currentIdx > 0) {
+      setActiveVideo(videos[currentIdx - 1]);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[80vh]">
@@ -254,9 +235,12 @@ const AcademicsChapterDetail = () => {
   const completedVideos = videos.filter(v => v.completed).length;
   const chapterProgressPercent = videos.length > 0 ? Math.round((completedVideos / videos.length) * 100) : 0;
 
+  // Google Drive url verification bounds
+  const isVideoUnavailable = !activeVideo?.embedLink || activeVideo.embedLink.includes('TEMP_VIDEO');
+
   return (
     <div className="fade-in max-w-7xl mx-auto py-10 px-6 lg:px-8">
-      {/* Back button */}
+      {/* Back to subjects */}
       <button 
         onClick={() => navigate(`/academics/subject/${subject._id}`)}
         className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-main)] font-black text-xs uppercase tracking-wider mb-8 transition-colors outline-none cursor-pointer"
@@ -269,17 +253,77 @@ const AcademicsChapterDetail = () => {
         {/* LEFT PANEL: Video Player, Title, Notes */}
         <div className="lg:col-span-2 space-y-6">
           
+          {/* Navigation Controls */}
+          {activeVideo && (
+            <div className="flex justify-between items-center bg-[var(--bg-card)] border border-[var(--border)] px-4 py-3 rounded-2xl shadow-sm">
+              <button
+                onClick={handlePrevVideo}
+                disabled={videos.findIndex(v => v._id === activeVideo._id) === 0}
+                className="flex items-center gap-2 text-xs font-black uppercase text-[var(--text-muted)] hover:text-[var(--text-main)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                <FiArrowLeft strokeWidth={3} /> Previous Video
+              </button>
+              <span className="text-[10px] font-black text-[var(--text-light)] uppercase tracking-wider">
+                Video {videos.findIndex(v => v._id === activeVideo._id) + 1} of {videos.length}
+              </span>
+              <button
+                onClick={handleNextVideo}
+                disabled={videos.findIndex(v => v._id === activeVideo._id) === videos.length - 1}
+                className="flex items-center gap-2 text-xs font-black uppercase text-[var(--text-muted)] hover:text-[var(--text-main)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Next Video <FiArrowRight strokeWidth={3} />
+              </button>
+            </div>
+          )}
+
           {/* Video Player */}
           {activeVideo ? (
-            <div className="aspect-video bg-black rounded-3xl overflow-hidden border border-[var(--border)] shadow-lg relative">
-              <iframe
-                id="academics-video-iframe"
-                src={`https://www.youtube.com/embed/${getYouTubeId(activeVideo.youtubeId)}?enablejsapi=1&rel=0`}
-                className="w-full h-full"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
+            <div className="aspect-video bg-black rounded-3xl overflow-hidden border border-[var(--border)] shadow-lg relative flex flex-col justify-between">
+              
+              {isVideoUnavailable ? (
+                // Google Drive Unavailable Banner (No crashing)
+                <div className="flex-1 w-full flex flex-col items-center justify-center text-center p-8 bg-slate-900 text-slate-350 select-none">
+                  <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded-2xl flex items-center justify-center text-3xl mb-4">
+                    ⚠️
+                  </div>
+                  <h3 className="text-base font-black text-white uppercase tracking-wider mb-2">Video is currently unavailable.</h3>
+                  <p className="text-xs font-semibold text-slate-400">Please contact your instructor.</p>
+                </div>
+              ) : (
+                // Google Drive Embed Preview iframe
+                <iframe
+                  id="academics-video-iframe"
+                  src={activeVideo.embedLink}
+                  className="flex-1 w-full"
+                  frameBorder="0"
+                  allow="autoplay"
+                  allowFullScreen
+                ></iframe>
+              )}
+
+              {/* Progress Slider (Required for user manual seeking/resuming and timer representation) */}
+              <div className="bg-slate-950 border-t border-slate-800 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex-1 w-full">
+                  <div className="flex justify-between items-center text-[9px] font-black text-slate-450 uppercase mb-1.5 tracking-wider">
+                    <span className="text-slate-400">Elapsed Time: {formatTime(elapsedTime)} / {formatTime(activeVideo.duration || 600)}</span>
+                    <span className="text-green-400">{Math.round((elapsedTime / (activeVideo.duration || 600)) * 100) || 0}% Watched</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max={activeVideo.duration || 600}
+                    value={elapsedTime}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      setElapsedTime(val);
+                      const percent = Math.min(Math.round((val / (activeVideo.duration || 600)) * 100), 100);
+                      saveProgress(val, percent, 0, percent >= 100);
+                    }}
+                    className="w-full h-1.5 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-green-500"
+                  />
+                </div>
+              </div>
+
             </div>
           ) : (
             <div className="aspect-video bg-slate-900 rounded-3xl flex items-center justify-center border border-[var(--border)] text-slate-400">
@@ -293,7 +337,7 @@ const AcademicsChapterDetail = () => {
               <div className="flex flex-wrap justify-between items-start gap-4 pb-4 border-b border-[var(--border-light)]">
                 <div>
                   <span className="text-[10px] font-black text-[var(--primary)] uppercase tracking-widest bg-[var(--primary-light)] px-2.5 py-1 rounded-lg border border-green-200">
-                    Active Lecture
+                    Active Video ({activeVideo.videoType || 'Google Drive'})
                   </span>
                   <h2 className="text-xl sm:text-2xl font-black text-[var(--text-main)] mt-3 tracking-tight">
                     {activeVideo.title}
@@ -321,17 +365,17 @@ const AcademicsChapterDetail = () => {
                         : 'bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] shadow-md hover:-translate-y-0.5'
                     }`}
                   >
-                    {activeVideo.completed ? <><FiCheck /> Completed</> : 'Mark Complete'}
+                    {activeVideo.completed ? <><FiCheck /> Completed</> : 'Mark Complete & Next'}
                   </button>
                 </div>
               </div>
 
               <div>
                 <h4 className="text-xs font-black text-[var(--text-main)] uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                  <FiBookOpen /> Chapter Overview
+                  <FiBookOpen /> Lecture Description
                 </h4>
                 <p className="text-xs font-semibold text-[var(--text-muted)] leading-relaxed">
-                  {chapter.description || 'Welcome to this syllabus lecture. Please watch the complete video series, download notes, and practice the concepts for examination prep.'}
+                  {activeVideo.description || 'No description provided for this video. Watch the lecture to cover university syllabus topics and prepare for semester exams.'}
                 </p>
               </div>
             </div>
@@ -340,12 +384,12 @@ const AcademicsChapterDetail = () => {
 
         {/* RIGHT PANEL: Playlist Sidebar */}
         <div className="space-y-6">
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-6 shadow-sm flex flex-col h-[550px] relative overflow-hidden">
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-6 shadow-sm flex flex-col h-[600px] relative overflow-hidden">
             
             {/* Header / Progress */}
             <div className="pb-6 border-b border-[var(--border-light)]">
               <span className="text-[9px] font-black text-[var(--text-light)] uppercase tracking-widest">Playlist Progress</span>
-              <h3 className="text-lg font-black text-[var(--text-main)] tracking-tight mt-1 mb-3">
+              <h3 className="text-lg font-black text-[var(--text-main)] tracking-tight mt-1 mb-3 truncate">
                 {chapter.name}
               </h3>
               
@@ -394,7 +438,7 @@ const AcademicsChapterDetail = () => {
                         {vid.title}
                       </h4>
                       <span className="text-[9px] font-bold text-[var(--text-light)] uppercase tracking-wider block mt-0.5">
-                        {Math.floor(vid.duration / 60)} min
+                        {Math.floor((vid.duration || 600) / 60)} min • {vid.videoType || 'drive'}
                       </span>
                     </div>
 

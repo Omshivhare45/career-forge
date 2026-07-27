@@ -28,6 +28,10 @@ import Careers from './pages/Careers';
 import Jobs from './pages/Jobs';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Contact from './pages/Contact';
+import AcademicsHome from './pages/AcademicsHome';
+import AcademicsSubjects from './pages/AcademicsSubjects';
+import AcademicsSubjectDetail from './pages/AcademicsSubjectDetail';
+import AcademicsChapterDetail from './pages/AcademicsChapterDetail';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -37,6 +41,7 @@ import EditProblem from './pages/admin/EditProblem';
 import ManageSubmissions from './pages/admin/ManageSubmissions';
 import ManageTestCases from './pages/admin/ManageTestCases';
 import ManageTopics from './pages/admin/ManageTopics';
+import ManageAcademics from './pages/admin/ManageAcademics';
 import InstallPrompt from './components/InstallPrompt';
 import { registerDevice, startSession, endSession } from './utils/analyticsTracker';
 
@@ -103,6 +108,10 @@ function App() {
               <Route path="/zero-to-coding" element={<ZeroToCoding />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/feedback" element={<Feedback />} />
+              <Route path="/academics" element={<AcademicsHome />} />
+              <Route path="/academics/subjects/:semesterId/:branchId" element={<AcademicsSubjects />} />
+              <Route path="/academics/subject/:subjectId" element={<AcademicsSubjectDetail />} />
+              <Route path="/academics/chapter/:chapterId" element={<AcademicsChapterDetail />} />
             </Route>
           </Route>
 
@@ -117,6 +126,7 @@ function App() {
               <Route path="/admin/problems/test-cases/:id" element={<ManageTestCases />} />
               <Route path="/admin/submissions" element={<ManageSubmissions />} />
               <Route path="/admin/topics" element={<ManageTopics />} />
+              <Route path="/admin/academics" element={<ManageAcademics />} />
             </Route>
           </Route>
 

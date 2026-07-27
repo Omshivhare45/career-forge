@@ -89,6 +89,7 @@ const Navbar = ({ isAdmin, isScrolled = false, isVisible = true, isCompact = fal
     { name: 'Dashboard', path: '/dashboard', icon: <MdOutlineDashboard /> },
     ...(isDsaActive ? [{ name: 'DSA Practice', path: '/roadmap', icon: <FiCode className="text-emerald-400" /> }] : []),
     { name: 'Zero to Coding', path: '/zero-to-coding', icon: <FiZap className="text-amber-400" /> },
+    { name: 'B.Tech Academics', path: '/academics', icon: <FiBookOpen /> },
     { name: 'Roadmaps', path: '/roadmap', icon: <FiMap /> },
     { name: 'Domains', path: '/domains', icon: <FiList /> },
     { name: 'Code Guru', path: '/code-guru', icon: <FiMessageSquare /> },

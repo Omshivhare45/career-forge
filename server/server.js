@@ -59,6 +59,8 @@ app.use('/api/domains', require('./routes/domains'));
 app.use('/api/phases', require('./routes/phases'));
 app.use('/api/topics', require('./routes/topics'));
 app.use('/api/progress', require('./routes/progress'));
+app.use('/api/academics', require('./routes/academics'));
+app.use('/api/admin/academics', require('./routes/adminAcademics'));
 app.use('/api/assessments', require('./routes/assessments'));
 app.use('/api/badges', require('./routes/badges'));
 app.use('/api/resources', require('./routes/resources'));

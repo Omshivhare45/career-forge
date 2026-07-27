@@ -486,6 +486,12 @@ const AdminDashboard = () => {
               </button>
             </div>
             <Link
+              to="/admin/academics"
+              className="px-4 py-2.5 rounded-xl text-xs font-black bg-blue-600 hover:bg-blue-500 text-white shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            >
+              🎓 Academics Manager
+            </Link>
+            <Link
               to="/dashboard"
               className="px-4 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
             >

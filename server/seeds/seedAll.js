@@ -244,6 +244,15 @@ async function seedDB(force = false) {
       console.error('❌ Failed to seed problem bank:', err.message);
     }
 
+    // Seed B.Tech Academics
+    try {
+      const seedAcademics = require('./academicSeed');
+      await seedAcademics();
+      console.log('🎓 B.Tech Academics seeded successfully');
+    } catch (err) {
+      console.error('❌ Failed to seed B.Tech Academics:', err.message);
+    }
+
     console.log('\n🎉 Database seeded successfully!');
     console.log(`📧 Admin: ${process.env.ADMIN_EMAIL || 'admin@careerforge.com'}`);
     console.log(`🔑 Password: ${process.env.ADMIN_PASSWORD || 'Admin@123'}`);

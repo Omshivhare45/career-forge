@@ -147,6 +147,34 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+      
+      {/* B.Tech Academics Invitation Card */}
+      <div className="mb-10 bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 p-8 rounded-3xl border border-green-200 shadow-[var(--shadow-soft)] relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 group">
+        <div className="absolute -top-12 -left-12 w-48 h-48 bg-green-200 rounded-full blur-3xl opacity-50"></div>
+        <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-teal-200 rounded-full blur-3xl opacity-50"></div>
+        
+        <div className="flex flex-col md:flex-row items-center gap-5 relative z-10 text-center md:text-left">
+          <div className="w-14 h-14 bg-[var(--bg-card)] border border-green-200 rounded-2xl flex items-center justify-center text-3xl shadow-sm shrink-0">
+            🎓
+          </div>
+          <div>
+            <div className="inline-block px-2.5 py-0.5 bg-green-100 text-[var(--brand-green)] text-[9px] font-black uppercase tracking-wider rounded-lg mb-1.5 border border-green-200">
+              University Syllabus
+            </div>
+            <h2 className="text-xl font-black text-[var(--land-text)] tracking-tight">B.Tech Academics</h2>
+            <p className="text-xs text-[var(--text-muted)] font-bold mt-1">
+              Study university subjects chapter-wise through structured video lectures, playlist sidebar, and progress tracking.
+            </p>
+          </div>
+        </div>
+
+        <Link 
+          to="/academics" 
+          className="relative z-10 px-6 py-3.5 bg-[var(--brand-green)] hover:bg-[var(--brand-green-hover)] text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg hover:-translate-y-1 transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+        >
+          Explore Academics <FiChevronRight strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
+        </Link>
+      </div>
 
       <div className="grid lg:grid-cols-3 gap-8 mb-10">
         {/* Active Quest Card */}

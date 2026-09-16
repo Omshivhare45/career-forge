@@ -73,7 +73,7 @@ const updateDSAStats = (user) => {
   const dsaProgress = getSafeDomainProgress(user, 'dsa');
   if (!dsaProgress || !dsaProgress.completedTopics || dsaProgress.completedTopics.length === 0) return;
   
-  const dsaTopics = dsaProgress.completedTopics.filter(ct => ct.difficultyFeedback);
+  const dsaTopics = dsaProgress.completedTopics.filter(ct => ct.difficultyFeedback && ct.difficultyFeedback !== 'unsolved');
   if (dsaTopics.length === 0) return;
 
   // Track counts for strongest/weakest calculation
@@ -548,35 +548,9 @@ exports.submitCode = async (req, res) => {
 
     domainProgress.codeSubmissions.push(newSubmission);
 
-    // If status is 'Accepted', reward 100 XP and mark the topic as completed in database
-    if (status === 'Accepted') {
-      const alreadyCompleted = domainProgress.completedTopics.find(t => t.topicId.toString() === topicId);
-      if (!alreadyCompleted) {
-        domainProgress.completedTopics.push({
-          topicId,
-          completedAt: new Date(),
-          studyTimeMinutes: 15,
-          notes: 'Solved via LeetCode IDE playground!',
-          difficultyFeedback: 'medium',
-          confidenceLevel: 4,
-          revisionNeeded: false
-        });
-
-        // Increment DSA Stats
-        if (key === 'dsa') {
-          domainProgress.dsaStats.totalProblemsSolved += 1;
-          domainProgress.dsaStats.lastSolvedAt = new Date();
-        }
-        domainProgress.xp = (domainProgress.xp || 0) + 100; // 100 XP coding award!
-      } else {
-        // Just add 10 XP for re-submitting correct solution
-        domainProgress.xp = (domainProgress.xp || 0) + 10;
-      }
-    }
-
-    if (key === 'dsa') {
-      updateDSAStats(user);
-    }
+    // Submissions are archival only. Topic completion, badges, streaks and XP are
+    // awarded exclusively by complete-topic so one accepted solve cannot be
+    // rewarded twice or pre-empt the completion flow.
 
     user.markModified(`domainsProgress.${key}`);
     await user.save();
@@ -649,10 +623,6 @@ exports.skipPhase = async (req, res) => {
           revisionNeeded: false
         });
         topicsCompletedCount++;
-
-        if (key === 'dsa') {
-          domainProgress.dsaStats.totalProblemsSolved += 1;
-        }
       }
     });
 

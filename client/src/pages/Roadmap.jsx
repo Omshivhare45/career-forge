@@ -196,7 +196,7 @@ const Roadmap = () => {
         
         // Find DSA Cheat Sheet Topic ID
         if (res.data.data.domain.slug === 'dsa') {
-          const phase10 = res.data.data.phases.find(p => p.phaseNumber === 10);
+          const phase10 = res.data.data.phases.find(p => p.phaseNumber === 11);
           if (phase10) {
             try {
               const topicsRes = await api.get(`/topics/phase/${phase10._id}`);
@@ -1046,7 +1046,7 @@ const Roadmap = () => {
   );
 };
 
-const TopicsList = ({ phaseId, isTopicCompleted, activeLevel, isDSA, dsaInstructor }) => {
+const TopicsList = ({ phaseId, isTopicCompleted, activeLevel, isDSA }) => {
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -1068,9 +1068,10 @@ const TopicsList = ({ phaseId, isTopicCompleted, activeLevel, isDSA, dsaInstruct
     </div>
   );
 
-  const filteredTopics = isDSA && dsaInstructor 
-    ? topics.filter(t => dsaInstructor === 'babbar' ? t.instructor === 'Love Babbar' : t.instructor !== 'Love Babbar') 
-    : topics;
+  // Show every topic in the phase. The server advances a phase only once ALL topics
+  // in it are completed, so filtering by instructor here would make progression
+  // impossible for phases whose topics span multiple instructors.
+  const filteredTopics = topics;
 
   if (filteredTopics.length === 0) return <div className="text-center py-10 text-[var(--text-light)] italic">No missions found for this instructor in this level.</div>;
 

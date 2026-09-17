@@ -229,6 +229,10 @@ export const getDsaLanguageContent = (topicTitle, languageKey = 'cpp', difficult
     default:     'PLDze6lLwgS7jG30yL76H3_K7v3qO-2v-3' // Main Java DSA Playlist
   };
 
+  // When a topic's DB youtubeLink supplies its own playlist, keep that playlist
+  // so the embed context matches the resolved video (no cross-course mixing).
+  let resolvedListId = null;
+
   const getVideo = () => {
     // If it is a Level 0 Foundations topic, resolve video by selected language dynamically
     const normalizedTitle = t.trim();
@@ -292,6 +296,8 @@ export const getDsaLanguageContent = (topicTitle, languageKey = 'cpp', difficult
       const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
       const match = dbYoutubeLink.match(regExp);
       if (match && match[2].length === 11) {
+        const listMatch = dbYoutubeLink.match(/[?&]list=([^#&?]+)/);
+        resolvedListId = (listMatch && listMatch[1]) ? listMatch[1] : null;
         return match[2];
       }
     }
@@ -409,6 +415,9 @@ export const getDsaLanguageContent = (topicTitle, languageKey = 'cpp', difficult
   };
 
   const getPlaylist = () => {
+    if (resolvedListId) {
+      return resolvedListId;
+    }
     if (languageKey === 'cpp' && dsaCourse === 'striver') {
       return 'PLgUwDviBIf0oF6QL8m22w1hIDC1vJ_BHz';
     }

@@ -6,7 +6,7 @@ import logoImg from '../assets/logo.png';
 import {
   FiMenu, FiX, FiBell, FiSun, FiMoon, FiLogOut, FiSettings,
   FiMap, FiList, FiMessageSquare, FiDownload, FiStar, FiZap,
-  FiEye, FiShield, FiBriefcase, FiCode, FiChevronDown
+  FiEye, FiShield, FiBriefcase, FiCode, FiChevronDown, FiBookOpen
 } from 'react-icons/fi';
 import { MdOutlineDashboard } from 'react-icons/md';
 
@@ -87,13 +87,13 @@ const Navbar = ({ isAdmin, isScrolled = false, isVisible = true, isCompact = fal
 
   const studentLinks = [
     { name: 'Dashboard', path: '/dashboard', icon: <MdOutlineDashboard /> },
-    ...(isDsaActive ? [{ name: 'DSA Practice', path: '/roadmap', icon: <FiCode className="text-emerald-400" /> }] : []),
+    
     { name: 'Zero to Coding', path: '/zero-to-coding', icon: <FiZap className="text-amber-400" /> },
-    { name: 'B.Tech Academics', path: '/academics', icon: <FiBookOpen /> },
+   
     { name: 'Roadmaps', path: '/roadmap', icon: <FiMap /> },
     { name: 'Domains', path: '/domains', icon: <FiList /> },
     { name: 'Code Guru', path: '/code-guru', icon: <FiMessageSquare /> },
-    { name: 'Jobs', path: '/jobs', icon: <FiBriefcase /> },
+
     { name: 'Feedback', path: '/feedback', icon: <FiStar /> },
   ];
 

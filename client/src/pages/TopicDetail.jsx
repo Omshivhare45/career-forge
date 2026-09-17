@@ -178,7 +178,7 @@ const TopicDetail = () => {
   // Custom Dynamic Languages & Tracks State
   const [selectedLang, setSelectedLang] = useState(() => normalizeDsaLanguage(localStorage.getItem('dsa_lang') || 'cpp'));
   const [useStriverAdvanced, setUseStriverAdvanced] = useState(() => localStorage.getItem('striver_advanced') === 'true');
-  const dsaCourse = topic?.instructor === 'Love Babbar' ? 'default' : 'striver';
+  const dsaCourse = useStriverAdvanced ? 'striver' : 'default';
   
   const langDisplayMap = { cpp: 'C++', java: 'Java', python: 'Python', javascript: 'JavaScript' };
   const currentLangName = langDisplayMap[selectedLang] || 'C++';
@@ -545,7 +545,11 @@ const TopicDetail = () => {
   const activeVideoEmbedUrl = useMemo(() => {
     if (langContent?.youtubeVideoId) {
       if (langContent.youtubeVideoId.length === 11) {
-        return `https://www.youtube.com/embed/${langContent.youtubeVideoId}?rel=0&modestbranding=1&showinfo=0`;
+        let url = `https://www.youtube.com/embed/${langContent.youtubeVideoId}?rel=0&modestbranding=1&showinfo=0`;
+        if (langContent.youtubePlaylistId) {
+          url += `&list=${langContent.youtubePlaylistId}`;
+        }
+        return url;
       }
       return getYouTubeEmbedUrl(langContent.youtubeVideoId);
     }
@@ -656,10 +660,11 @@ const TopicDetail = () => {
                 // Periodically save video progress
                 if (event.data === 1 || event.data === 2) {
                   const currentTime = Math.round(event.target.getCurrentTime());
+                  const progressKey = `${activeDomainKey}_${id}_${activeCheckpoint}`;
                   api.post('/progress/video-progress', {
-                    checkpointId: activeCheckpoint,
+                    checkpointId: progressKey,
                     timestamp: currentTime,
-                    currentCheckpoint: activeCheckpoint,
+                    currentCheckpoint: progressKey,
                     lastOpenedTopic: id
                   }).catch(e => console.warn("Failed to persist video progress", e));
                 }
@@ -667,7 +672,7 @@ const TopicDetail = () => {
               onReady: (event) => {
                 const activeDomainKey = user?.activeDomain?.slug ? getProgressKey(user.activeDomain.slug) : 'dsa';
                 const savedProgress = user?.domainsProgress?.[activeDomainKey]?.videoProgress;
-                if (savedProgress && savedProgress.checkpointId === activeCheckpoint && savedProgress.timestamp > 0) {
+                if (savedProgress && savedProgress.checkpointId === `${activeDomainKey}_${id}_${activeCheckpoint}` && savedProgress.timestamp > 0) {
                   event.target.seekTo(savedProgress.timestamp, true);
                   toast.success(`Resuming tutorial video from ${Math.floor(savedProgress.timestamp / 60)}m ${savedProgress.timestamp % 60}s ⚡`);
                 }
@@ -689,7 +694,7 @@ const TopicDetail = () => {
         } catch (e) {}
       }
     };
-  }, [checkpointVideoEmbedUrl, activeCheckpoint, user, id]);
+  }, [checkpointVideoEmbedUrl, activeCheckpoint, user, id, activeDomainKey]);
 
   // Reset boilerplate when topic, language, or difficulty changes
   useEffect(() => {
@@ -2402,6 +2407,23 @@ const TopicDetail = () => {
                     <div className="text-[10px] font-black text-[var(--text-light)] uppercase tracking-wider mt-1">
                       Difficulty: <span className="text-[var(--primary)]">{topic?.difficulty || 'Beginner'}</span> • Duration: {topic?.estimatedTime || '1 hour'}
                     </div>
+                    {isDsaDomain && (
+                      <div className="flex items-center gap-2 mt-4">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-light)]">Instructor:</span>
+                        <button 
+                          onClick={() => setUseStriverAdvanced(false)}
+                          className={`px-3 py-1 rounded border text-[10px] font-bold uppercase tracking-wider transition-colors ${!useStriverAdvanced ? 'bg-[var(--primary)] text-[var(--text-main)] border-[var(--primary)]' : 'bg-[var(--bg-sub)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-main)]'}`}
+                        >
+                          Love Babbar
+                        </button>
+                        <button 
+                          onClick={() => setUseStriverAdvanced(true)}
+                          className={`px-3 py-1 rounded border text-[10px] font-bold uppercase tracking-wider transition-colors ${useStriverAdvanced ? 'bg-[var(--primary)] text-[var(--text-main)] border-[var(--primary)]' : 'bg-[var(--bg-sub)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-main)]'}`}
+                        >
+                          Striver A2Z
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {isCompleted && (
                     <div className="px-3 py-1 bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 rounded-lg text-xs font-black flex items-center gap-1.5 animate-bounce-subtle">
@@ -2798,19 +2820,39 @@ const TopicDetail = () => {
                     <h2 className="text-lg font-black text-[var(--text-main)] tracking-tight">
                       {topic.title}
                     </h2>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
-                        (topic.difficulty || 'medium').toLowerCase() === 'easy'
-                          ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                          : (topic.difficulty || 'medium').toLowerCase() === 'hard'
-                            ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
-                            : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                      }`}>
-                        {topic.difficulty || 'Medium'}
-                      </span>
-                      <span className="text-[9px] font-bold text-[var(--text-light)] uppercase tracking-wider">
-                        Est. {topic.estimatedTime || '15 mins'}
-                      </span>
+                    <div className="flex flex-col gap-3 mt-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                          (topic.difficulty || 'medium').toLowerCase() === 'easy'
+                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                            : (topic.difficulty || 'medium').toLowerCase() === 'hard'
+                              ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                              : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                        }`}>
+                          {topic.difficulty || 'Medium'}
+                        </span>
+                        <span className="text-[9px] font-bold text-[var(--text-light)] uppercase tracking-wider">
+                          Est. {topic.estimatedTime || '15 mins'}
+                        </span>
+                      </div>
+                      
+                      {isDsaDomain && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-light)]">Instructor:</span>
+                          <button 
+                            onClick={() => setUseStriverAdvanced(false)}
+                            className={`px-3 py-1 rounded border text-[10px] font-bold uppercase tracking-wider transition-colors ${!useStriverAdvanced ? 'bg-[var(--primary)] text-[var(--text-main)] border-[var(--primary)]' : 'bg-[var(--bg-sub)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-main)]'}`}
+                          >
+                            Love Babbar
+                          </button>
+                          <button 
+                            onClick={() => setUseStriverAdvanced(true)}
+                            className={`px-3 py-1 rounded border text-[10px] font-bold uppercase tracking-wider transition-colors ${useStriverAdvanced ? 'bg-[var(--primary)] text-[var(--text-main)] border-[var(--primary)]' : 'bg-[var(--bg-sub)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-main)]'}`}
+                          >
+                            Striver A2Z
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

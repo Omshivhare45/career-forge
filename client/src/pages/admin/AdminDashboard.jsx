@@ -1201,7 +1201,7 @@ const AdminDashboard = () => {
               <div className="space-y-4">
                 <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Academic & Onboarding Summary</h4>
 
-                {selectedUser.profile?.collegeName ? (
+                {selectedUser.profile?.collegeName && (
                   <div className="space-y-3 text-xs">
                     <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-white/5 space-y-2">
                       <div className="flex justify-between"><span className="text-slate-500">Institution:</span><span className="text-slate-800 dark:text-white font-bold">{selectedUser.profile.collegeName}</span></div>

@@ -1017,22 +1017,24 @@ export const getRecursionCheckpointContent = (checkpointId, lang = 'cpp') => {
   }
 };
   const cp = checkpoints[checkpointId] || checkpoints['rec_cp1'];
+  const normalizedLang = (lang || 'cpp').toLowerCase() === 'js' ? 'javascript' : (lang || 'cpp').toLowerCase();
   
   return {
     title: cp.title,
     subtitle: cp.subtitle || '',
     videoEmbedUrl: cp.videoEmbedUrl,
-    assessmentType: cp.assessmentType,
-    visualizationData: cp.visualizationData,
+    assessmentType: cp.assessmentType || 'coding',
+    visualizationData: cp.visualizationData || null,
     challengeTitle: cp.challenge.title,
     challengeDescription: cp.challenge.description,
     approach: cp.challenge.approach || '',
     code: cp.challenge.solution || '',
-    editorBoilerplate: cp.challenge.boilerplates[lang] || cp.challenge.boilerplates['cpp'] || '',
+    editorBoilerplate: cp.challenge.boilerplates[normalizedLang] || cp.challenge.boilerplates['cpp'] || '',
     testCases: cp.challenge.testCases,
     functionName: cp.challenge.functionName || 'solve',
     hints: cp.challenge.hints,
     constraints: cp.challenge.constraints || 'None',
-    hasVideo: true
+    hasVideo: true,
+    isLastCheckpoint: checkpointId === 'rec_cp22'
   };
 };

@@ -20,33 +20,22 @@ const StepperBar = ({ ctx }) => {
           {[
             { step: 1, label: '1. Watch & Code' },
             { step: 2, label: '2. Mini Assessment' }
-          ].map(s => {
-            const isLocked = s.step === 2 && !isCompleted && !isVideoFinished;
-            return (
-              <button
-                key={s.step}
-                onClick={() => {
-                  if (isLocked) {
-                    toast.error("Please watch the video tutorial to unlock the assessment!");
-                    return;
-                  }
-                  setLearningStep(s.step);
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap ${
-                  learningStep === s.step
-                    ? 'bg-[var(--bg-card)] text-[var(--primary)] border border-[var(--border)] shadow-sm'
-                    : !isLocked
-                      ? 'bg-[var(--primary-light)] text-[var(--primary)] border border-transparent cursor-pointer hover:bg-[var(--primary)] hover:text-[var(--text-main)]'
-                      : 'text-[var(--text-muted)] opacity-50 cursor-pointer'
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${learningStep > s.step || (s.step === 2 && isCompleted) ? 'bg-[var(--primary)] text-[var(--text-main)]' : 'border border-current'}`}>
-                  {learningStep > s.step || (s.step === 2 && isCompleted) ? <FiCheckCircle size={8} /> : s.step}
-                </div>
-                {s.label}
-              </button>
-            );
-          })}
+          ].map(s => (
+            <button
+              key={s.step}
+              onClick={() => setLearningStep(s.step)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap cursor-pointer ${
+                learningStep === s.step
+                  ? 'bg-[var(--bg-card)] text-[var(--primary)] border border-[var(--border)] shadow-sm'
+                  : 'bg-[var(--primary-light)] text-[var(--primary)] border border-transparent hover:bg-[var(--primary)] hover:text-[var(--text-main)]'
+              }`}
+            >
+              <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${learningStep > s.step || (s.step === 2 && isCompleted) ? 'bg-[var(--primary)] text-[var(--text-main)]' : 'border border-current'}`}>
+                {learningStep > s.step || (s.step === 2 && isCompleted) ? <FiCheckCircle size={8} /> : s.step}
+              </div>
+              {s.label}
+            </button>
+          ))}
         </div>
 
         {learningStep === 1 ? (

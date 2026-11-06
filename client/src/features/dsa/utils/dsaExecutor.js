@@ -40,17 +40,27 @@ export const playSoundEffect = (type) => {
 export const getYouTubeEmbedUrl = (url) => {
   if (!url || typeof url !== 'string') return null;
 
+  const trimmed = url.trim();
+  if (trimmed.includes('youtube.com/embed/')) {
+    return trimmed;
+  }
+
+  // Handle direct 11-character video IDs (e.g. "EAR7De6Goz4")
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+    return `https://www.youtube.com/embed/${trimmed}?rel=0&modestbranding=1`;
+  }
+
   const videoRegExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-  const videoMatch = url.match(videoRegExp);
+  const videoMatch = trimmed.match(videoRegExp);
   const videoId = (videoMatch && videoMatch[2] && videoMatch[2].length === 11) ? videoMatch[2] : null;
 
-  const listMatch = url.match(/[?&]list=([^#\&\?]+)/);
+  const listMatch = trimmed.match(/[?&]list=([^#\&\?]+)/);
   const listId = (listMatch && listMatch[1]) ? listMatch[1] : null;
 
   if (videoId && listId) {
-    return `https://www.youtube.com/embed/${videoId}?list=${listId}&rel=0&modestbranding=1&showinfo=0`;
+    return `https://www.youtube.com/embed/${videoId}?list=${listId}&rel=0&modestbranding=1`;
   } else if (videoId) {
-    return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&showinfo=0`;
+    return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`;
   } else if (listId) {
     return `https://www.youtube.com/embed/videoseries?list=${listId}`;
   }
@@ -58,20 +68,28 @@ export const getYouTubeEmbedUrl = (url) => {
   return null;
 };
 
-// Helper to safely append enablejsapi and origin parameters to avoid postMessage origin mismatch errors
+// Helper to safely format YouTube embed parameters. Adds the IFrame API flag and
+// the current page origin (never a hardcoded production origin) so localhost and
+// deployed builds both avoid postMessage origin mismatches. Existing parameters
+// such as list, start, rel and modestbranding are preserved.
 export const appendYTParams = (url) => {
   if (!url || typeof url !== 'string') return "";
   try {
-    let updatedUrl = url;
-    if (!updatedUrl.includes('enablejsapi=1')) {
-      const separator = updatedUrl.includes('?') ? '&' : '?';
-      updatedUrl = `${updatedUrl}${separator}enablejsapi=1&autoplay=1`;
+    const base = typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'https://www.youtube.com';
+    const parsed = new URL(url, base);
+    const params = parsed.searchParams;
+
+    params.set('enablejsapi', '1');
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      params.set('origin', window.location.origin);
     }
-    if (!updatedUrl.includes('origin=') && typeof window !== 'undefined') {
-      updatedUrl = `${updatedUrl}&origin=${window.location.origin}`;
-    }
-    return updatedUrl;
-  } catch (e) {
+    if (!params.has('rel')) params.set('rel', '0');
+    if (!params.has('modestbranding')) params.set('modestbranding', '1');
+
+    return parsed.toString();
+  } catch {
     return url;
   }
 };

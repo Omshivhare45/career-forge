@@ -59,16 +59,14 @@ const ProblemSection = ({ ctx, variant }) => {
     return (
       <div className="p-5 space-y-4">
         {/* "Now try this yourself" motivating header */}
-        {checkpointVideoFinished && (
-          <div className="p-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl space-y-1">
-            <div className="text-sm font-black text-[var(--text-main)] flex items-center gap-2">
-              <span>💡</span> Now try this yourself!
-            </div>
-            <p className="text-[10px] text-[var(--text-muted)] font-semibold leading-relaxed">
-              You just watched the concept. Now it's your turn to write the code. Read the problem, think through the logic, and hit Run Code on the right.
-            </p>
+        <div className="p-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl space-y-1">
+          <div className="text-sm font-black text-[var(--text-main)] flex items-center gap-2">
+            <span>💡</span> Now try this yourself!
           </div>
-        )}
+          <p className="text-[10px] text-[var(--text-muted)] font-semibold leading-relaxed">
+            Read the problem, write the code in the editor, and hit Run Code on the right.
+          </p>
+        </div>
 
         {/* Challenge title */}
         {cpContent.challengeTitle && (
@@ -131,10 +129,6 @@ const ProblemSection = ({ ctx, variant }) => {
         {/* Complete checkpoint button */}
         <button
           onClick={() => {
-            if (!checkpointVideoFinished) {
-              toast.error('Watch the video first! Click "Mark Done" when finished. 🎬');
-              return;
-            }
             if (!checkpointCodePassed) {
               toast.error('Pass all test cases first! Write your code and click Run Code. ⚡');
               return;
@@ -146,17 +140,15 @@ const ProblemSection = ({ ctx, variant }) => {
             setTestResults([]);
             setConsoleLogs([]);
           }}
-          disabled={!checkpointVideoFinished || !checkpointCodePassed}
+          disabled={!checkpointCodePassed}
           className={`w-full py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 mt-2 ${
-            !checkpointVideoFinished || !checkpointCodePassed
+            !checkpointCodePassed
               ? 'bg-[var(--border-light)] text-[var(--text-light)] cursor-not-allowed border border-[var(--border)]'
               : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-[var(--text-main)] shadow-lg shadow-emerald-500/25 cursor-pointer hover:scale-[1.01]'
           }`}
         >
           {completedCheckpoints.includes(activeCheckpoint) ? (
             <><FiCheckCircle /> Checkpoint Done!</>
-          ) : !checkpointVideoFinished ? (
-            <>🔒 Watch the Video First</>
           ) : !checkpointCodePassed ? (
             <>⚡ Pass All Tests to Unlock</>
           ) : isLastCp ? (
@@ -192,16 +184,14 @@ const ProblemSection = ({ ctx, variant }) => {
   if (variant === 'lovebabbar') {
     return (
       <div className="p-5 space-y-4">
-        {isVideoFinished && (
-          <div className="p-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl space-y-1">
-            <div className="text-sm font-black text-[var(--text-main)] flex items-center gap-2">
-              <span>💡</span> Now try this yourself!
-            </div>
-            <p className="text-[10px] text-[var(--text-muted)] font-semibold leading-relaxed">
-              You just watched the concept. Now it's your turn to write the code. Read the problem, think through the logic, and hit Run Code on the right.
-            </p>
+        <div className="p-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl space-y-1">
+          <div className="text-sm font-black text-[var(--text-main)] flex items-center gap-2">
+            <span>💡</span> Now try this yourself!
           </div>
-        )}
+          <p className="text-[10px] text-[var(--text-muted)] font-semibold leading-relaxed">
+            Read the problem, write the code in the editor, and hit Run Code on the right.
+          </p>
+        </div>
 
         {topic?.title && (
           <div className="flex items-center gap-2">
@@ -261,23 +251,12 @@ const ProblemSection = ({ ctx, variant }) => {
         {/* Complete Topic button */}
         <button
           onClick={(e) => {
-            if (!isVideoFinished) {
-              toast.error('Watch the video first! Click "Mark Done" when finished. 🎬');
-              return;
-            }
             handleComplete(e);
           }}
-          disabled={!isVideoFinished}
-          className={`w-full py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 mt-2 ${
-            !isVideoFinished
-              ? 'bg-[var(--border-light)] text-[var(--text-light)] cursor-not-allowed border border-[var(--border)]'
-              : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-[var(--text-main)] shadow-lg shadow-emerald-500/25 cursor-pointer hover:scale-[1.01]'
-          }`}
+          className="w-full py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 mt-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-[var(--text-main)] shadow-lg shadow-emerald-500/25 cursor-pointer hover:scale-[1.01]"
         >
           {isCompleted ? (
             <><FiCheckCircle /> Completed!</>
-          ) : !isVideoFinished ? (
-            <>🔒 Watch the Video First</>
           ) : (
             <>Submit & Complete</>
           )}

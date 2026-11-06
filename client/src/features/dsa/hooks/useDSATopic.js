@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../../api/axios';
 import codeApi from '../../../api/codeApi';
@@ -12,8 +12,8 @@ import {
   getRank,
   playSoundEffect,
   getYouTubeEmbedUrl,
-  appendYTParams,
 } from '../utils/dsaExecutor';
+import { useYouTubePlayer } from './useYouTubePlayer';
 import toast from 'react-hot-toast';
 
 // Central hook backing the unified DSA topic learning page.
@@ -50,7 +50,6 @@ export const useDSATopic = () => {
   // Learning flow step state: 1=Video, 2=Assessment/Challenge, 'transition'=overlay
   const [learningStep, setLearningStep] = useState(1);
   const [isVideoFinished, setIsVideoFinished] = useState(false);
-  const playerRef = useRef(null);
   const [allTopics, setAllTopics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [studyTime, setStudyTime] = useState(30);
@@ -208,7 +207,6 @@ export const useDSATopic = () => {
   const [completedCheckpoints, setCompletedCheckpoints] = useState(() => {
     try { return JSON.parse(localStorage.getItem(`dsa_cp_done_${id}`) || '[]'); } catch { return []; }
   });
-  const checkpointPlayerRef = useRef(null);
 
   useEffect(() => {
     if (id && topic) {
@@ -356,19 +354,6 @@ export const useDSATopic = () => {
     };
   }, [isResizingPanel]);
 
-  // Load YouTube IFrame API script once
-  useEffect(() => {
-    if (!window.YT) {
-      const tag = document.createElement('script');
-      tag.src = "https://www.youtube.com/iframe_api";
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      if (firstScriptTag && firstScriptTag.parentNode) {
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-      } else {
-        document.head.appendChild(tag);
-      }
-    }
-  }, []);
 
   // Sync initial language with user profile onboarding answers
   useEffect(() => {
@@ -606,172 +591,117 @@ export const useDSATopic = () => {
     return null;
   }, [isDsaDomain, activeVideo, langContent, topic]);
 
-  // Hook up YouTube Player state listener for the Striver/guided tutorial player: we mirror the
-  // original TopicDetail behavior and instantiate the YT API player whenever the Step-1 video is
-  // rendered, regardless of which course track is active.
-  useEffect(() => {
-    if (!activeVideoEmbedUrl || learningStep !== 1) return;
+  // ─── YouTube playback progress tracking ────────────────────────────────────
+  // The backend contract is unchanged: POST /progress/video-progress with
+  // { checkpointId, timestamp, currentCheckpoint, lastOpenedTopic }.
+  const persistVideoProgress = useCallback((checkpointId, timestamp) => {
+    if (!id || !checkpointId || !Number.isFinite(Number(timestamp))) return;
+    api.post('/progress/video-progress', {
+      checkpointId,
+      timestamp: Math.max(0, Math.round(Number(timestamp))),
+      currentCheckpoint: checkpointId,
+      lastOpenedTopic: id,
+    }).catch(() => {
+      // Best-effort persistence; a transient network error must not stop video.
+    });
+  }, [id]);
 
-    let checkYTInterval = setInterval(() => {
-      if (window.YT && window.YT.Player) {
-        clearInterval(checkYTInterval);
+  const savedVideoProgress = user?.domainsProgress?.[activeDomainKey]?.videoProgress;
+  const checkpointProgressKey = `${activeDomainKey}_${id}_${activeCheckpoint}`;
+  const tutorialProgressKey = `tutorial_${id}`;
 
+  const checkpointResumeTime = savedVideoProgress?.checkpointId === checkpointProgressKey
+    ? Number(savedVideoProgress.timestamp) || 0
+    : 0;
+  const tutorialResumeTime = savedVideoProgress?.checkpointId === tutorialProgressKey
+    ? Number(savedVideoProgress.timestamp) || 0
+    : 0;
+
+  const handleCheckpointPlayerStateChange = useCallback((event) => {
+    const state = event.data;
+    if (state === 0) {
+      setCheckpointVideoFinished(true);
+      if (isDsaDomain && activeVideo?.key) {
         try {
-          if (playerRef.current) {
-            playerRef.current.destroy();
-            playerRef.current = null;
-          }
-        } catch (e) {
-          console.warn("Error destroying previous player", e);
+          localStorage.setItem(`dsa_video_done_${id}_${activeVideo.key}`, 'true');
+        } catch {
+          // Ignore storage quota / privacy-mode failures.
         }
+      }
+      toast.success('Checkpoint tutorial completed! Challenge unlocked! 🔓');
+    }
 
+    if (state === 0 || state === 1 || state === 2) {
+      try {
+        persistVideoProgress(`${activeDomainKey}_${id}_${activeCheckpoint}`, event.target.getCurrentTime());
+      } catch {
+        // The player was destroyed between the event and this handler.
+      }
+    }
+  }, [activeCheckpoint, activeDomainKey, activeVideo, id, isDsaDomain, persistVideoProgress, setCheckpointVideoFinished]);
+
+  const handleCheckpointBeforeDestroy = useCallback((player) => {
+    try {
+      persistVideoProgress(`${activeDomainKey}_${id}_${activeCheckpoint}`, player.getCurrentTime());
+    } catch {
+      // Player already torn down.
+    }
+  }, [activeCheckpoint, activeDomainKey, id, persistVideoProgress]);
+
+  const handleTutorialPlayerStateChange = useCallback((event) => {
+    const state = event.data;
+    if (state === 0) {
+      setIsVideoFinished(true);
+      if (isDsaDomain && activeVideo?.key) {
         try {
-          playerRef.current = new window.YT.Player('tutorial-video-iframe', {
-            events: {
-              onStateChange: (event) => {
-                // 0 is YT.PlayerState.ENDED
-                if (event.data === 0) {
-                  setIsVideoFinished(true);
-                  if (isDsaDomain && activeVideo?.key) {
-                    localStorage.setItem(`dsa_video_done_${id}_${activeVideo.key}`, 'true');
-                  }
-                  toast.success("Tutorial video completed! Assessment is now unlocked! 🔓");
-                }
+          localStorage.setItem(`dsa_video_done_${id}_${activeVideo.key}`, 'true');
+        } catch {
+          // Ignore storage quota / privacy-mode failures.
+        }
+      }
+      toast.success('Tutorial video completed! Assessment is now unlocked! 🔓');
+    }
 
-                // Periodically save video progress
-                if (event.data === 1 || event.data === 2) {
-  const player = event.target;
+    if (state === 0 || state === 1 || state === 2) {
+      try {
+        persistVideoProgress(`tutorial_${id}`, event.target.getCurrentTime());
+      } catch {
+        // The player was destroyed between the event and this handler.
+      }
+    }
+  }, [activeVideo, id, isDsaDomain, persistVideoProgress, setIsVideoFinished]);
 
-  if (typeof player?.getCurrentTime !== 'function') {
-    console.warn(
-      'Progress not saved: YouTube player is not ready.',
-      event.data
-    );
-    return;
-  }
+  const handleTutorialBeforeDestroy = useCallback((player) => {
+    try {
+      persistVideoProgress(`tutorial_${id}`, player.getCurrentTime());
+    } catch {
+      // Player already torn down.
+    }
+  }, [id, persistVideoProgress]);
 
-  const currentTime = Math.floor(player.getCurrentTime());
+  // These flags mirror exactly which VideoPlayer variant is mounted, so we never
+  // attach a player to an iframe that does not exist.
+  const showCheckpointPlayer = Boolean(checkpointVideoEmbedUrl) &&
+    (isDsaDomain ? activeVideo?.type === 'checkpoint' : isCheckpointMode);
+  const showTutorialPlayer = Boolean(activeVideoEmbedUrl) && !showCheckpointPlayer;
 
-  api.post('/progress/video-progress', {
-    checkpointId: `tutorial_${id}`,
-    timestamp: currentTime,
-    currentCheckpoint: `tutorial_${id}`,
-    lastOpenedTopic: id
-  }).catch(error => {
-    console.warn('Failed to persist video progress:', error);
+  useYouTubePlayer({
+    iframeId: `checkpoint-video-${activeCheckpoint}`,
+    enabled: showCheckpointPlayer,
+    identity: `${activeCheckpoint}|${selectedLang}|${checkpointVideoEmbedUrl || ''}`,
+    resumeTime: checkpointResumeTime,
+    onStateChange: handleCheckpointPlayerStateChange,
+    onBeforeDestroy: handleCheckpointBeforeDestroy,
   });
-}
 
-
-              },
-              onReady: (event) => {
-                const activeDomainKey = user?.activeDomain?.slug ? getProgressKey(user.activeDomain.slug) : 'dsa';
-                const savedProgress = user?.domainsProgress?.[activeDomainKey]?.videoProgress;
-                if (savedProgress && savedProgress.checkpointId === `tutorial_${id}` && savedProgress.timestamp > 0) {
-                  event.target.seekTo(savedProgress.timestamp, true);
-                  toast.success(`Resuming tutorial video from ${Math.floor(savedProgress.timestamp / 60)}m ${savedProgress.timestamp % 60}s ⚡`);
-                }
-              }
-            }
-          });
-        } catch (err) {
-          console.warn("Failed to instantiate YT.Player:", err);
-        }
-      }
-    }, 1000);
-
-    return () => {
-      clearInterval(checkYTInterval);
-      if (playerRef.current) {
-        try {
-          playerRef.current.destroy();
-          playerRef.current = null;
-        } catch (e) {}
-      }
-    };
-  }, [activeVideoEmbedUrl, learningStep, user, id, dsaCourse, isDsaDomain, activeVideo]);
-
-  // Hook up YouTube Player state listener for checkpoint videos
-  useEffect(() => {
-    if (!checkpointVideoEmbedUrl || !activeCheckpoint) return;
-
-    let checkYTInterval = setInterval(() => {
-      if (window.YT && window.YT.Player) {
-        clearInterval(checkYTInterval);
-
-        try {
-          if (checkpointPlayerRef.current) {
-            checkpointPlayerRef.current.destroy();
-            checkpointPlayerRef.current = null;
-          }
-        } catch (e) {
-          console.warn("Error destroying previous checkpoint player", e);
-        }
-
-        try {
-          const domId = `checkpoint-video-${activeCheckpoint}`;
-          const iframeEl = document.getElementById(domId);
-          if (!iframeEl) return;
-
-          checkpointPlayerRef.current = new window.YT.Player(domId, {
-            events: {
-              onStateChange: (event) => {
-                if (event.data === 0) {
-                  setCheckpointVideoFinished(true);
-                  if (isDsaDomain && activeVideo?.key) {
-                    localStorage.setItem(`dsa_video_done_${id}_${activeVideo.key}`, 'true');
-                  }
-                  toast.success("Checkpoint tutorial video completed! challenge unlocked! 🔓");
-                }
-
-                // Periodically save video progress
-               
-if (event.data === 1 || event.data === 2) {
-  const target = event.target;
-
-  if (typeof target?.getCurrentTime !== 'function') {
-    console.warn('Checkpoint player API is not ready; skipping progress save.');
-    return;
-  }
-
-  const currentTime = Math.round(target.getCurrentTime());
-  const progressKey = `${activeDomainKey}_${id}_${activeCheckpoint}`;
-
-  api.post('/progress/video-progress', {
-    checkpointId: progressKey,
-    timestamp: currentTime,
-    currentCheckpoint: progressKey,
-    lastOpenedTopic: id
-  }).catch(e => console.warn('Failed to persist video progress', e));
-}
-
-              },
-              onReady: (event) => {
-                const activeDomainKey = user?.activeDomain?.slug ? getProgressKey(user.activeDomain.slug) : 'dsa';
-                const savedProgress = user?.domainsProgress?.[activeDomainKey]?.videoProgress;
-                if (savedProgress && savedProgress.checkpointId === `${activeDomainKey}_${id}_${activeCheckpoint}` && savedProgress.timestamp > 0) {
-                  event.target.seekTo(savedProgress.timestamp, true);
-                  toast.success(`Resuming tutorial video from ${Math.floor(savedProgress.timestamp / 60)}m ${savedProgress.timestamp % 60}s ⚡`);
-                }
-              }
-            }
-          });
-        } catch (err) {
-          console.warn("Failed to instantiate checkpoint YT.Player:", err);
-        }
-      }
-    }, 1000);
-
-    return () => {
-      clearInterval(checkYTInterval);
-      if (checkpointPlayerRef.current) {
-        try {
-          checkpointPlayerRef.current.destroy();
-          checkpointPlayerRef.current = null;
-        } catch (e) {}
-      }
-    };
-  }, [checkpointVideoEmbedUrl, activeCheckpoint, user, id, activeDomainKey, isDsaDomain, activeVideo]);
+  useYouTubePlayer({
+    iframeId: 'tutorial-video-iframe',
+    enabled: showTutorialPlayer,
+    identity: `${activeVideo?.key || 'default'}|${selectedLang}|${activeVideoEmbedUrl || ''}|${learningStep}`,
+    resumeTime: tutorialResumeTime,
+    onStateChange: handleTutorialPlayerStateChange,
+    onBeforeDestroy: handleTutorialBeforeDestroy,
+  });
 
   // Reset boilerplate when topic, language, or difficulty changes
   useEffect(() => {

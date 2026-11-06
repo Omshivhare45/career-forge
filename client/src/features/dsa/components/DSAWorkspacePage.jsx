@@ -103,7 +103,6 @@ export const DSAWorkspacePage = ({ ctx }) => {
   };
 
   const handleNextTopic = () => {
-    if (!ctx?.isCompleted) return;
     if (ctx?.nextTopic) navigate(`/topic/${ctx.nextTopic._id}`);
     else if (ctx?.prevTopic) navigate(`/topic/${ctx.prevTopic._id}`);
     else navigate('/roadmap');
@@ -224,13 +223,8 @@ export const DSAWorkspacePage = ({ ctx }) => {
                 <button
                   type="button"
                   onClick={handleNextTopic}
-                  disabled={!ctx?.isCompleted}
-                  title={!ctx?.isCompleted ? 'Complete this topic to continue' : (ctx?.nextTopic ? `Continue to ${ctx.nextTopic.title}` : 'Back to roadmap')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${
-                    ctx?.isCompleted
-                      ? 'bg-gradient-to-r from-[var(--primary)] to-amber-500 text-[var(--text-main)] shadow-md cursor-pointer hover:scale-[1.02]'
-                      : 'bg-[var(--border-light)] text-[var(--text-light)] cursor-not-allowed border border-[var(--border)]'
-                  }`}
+                  title={ctx?.nextTopic ? `Continue to ${ctx.nextTopic.title}` : 'Back to roadmap'}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-gradient-to-r from-[var(--primary)] to-amber-500 text-[var(--text-main)] shadow-md cursor-pointer hover:scale-[1.02]"
                 >
                   Next Topic <FiChevronRight size={12} />
                 </button>

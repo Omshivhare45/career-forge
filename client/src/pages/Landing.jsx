@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import logoImg from '../assets/logo.png';
-import { FiMenu, FiX, FiArrowRight, FiCheckCircle, FiStar, FiTrendingUp, FiTarget, FiZap } from 'react-icons/fi';
+import { FiMenu, FiX, FiArrowRight, FiCheckCircle, FiTrendingUp, FiTarget } from 'react-icons/fi';
 import { BsLightningFill } from 'react-icons/bs';
-import api from '../api/axios';
+import GuestExplorePipeline from '../pipelines/guestExplore/GuestExplorePipeline';
 
 const Landing = () => {
   const { user, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isGuestExploreOpen, setIsGuestExploreOpen] = useState(false);
 
   useEffect(() => {
     // Force light mode on public pages to prevent dark mode class leakage
@@ -45,6 +45,9 @@ const Landing = () => {
               </Link>
             ) : (
               <>
+                <button type="button" onClick={() => setIsGuestExploreOpen(true)} className="hidden sm:block text-[var(--land-nav)] hover:text-[var(--brand-green)] font-extrabold transition-colors px-4 py-2">
+                  Explore as Guest
+                </button>
                 <Link to="/login" className="hidden sm:block text-[var(--land-nav)] hover:text-[var(--brand-green)] font-extrabold transition-colors px-4 py-2">
                   Sign In
                 </Link>
@@ -53,6 +56,7 @@ const Landing = () => {
                 </Link>
               </>
             )}
+            {isGuestExploreOpen && <GuestExplorePipeline onClose={() => setIsGuestExploreOpen(false)} />}
             <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden text-[var(--land-text)] p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <FiMenu size={28} strokeWidth={2.5} />
             </button>
@@ -83,6 +87,9 @@ const Landing = () => {
                   </Link>
                 ) : (
                   <>
+                    <button type="button" onClick={() => { setIsMobileMenuOpen(false); setIsGuestExploreOpen(true); }} className="w-full text-center text-lg font-bold hover:text-[var(--brand-green)] py-2">
+                      Explore as Guest
+                    </button>
                     <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="w-full text-center text-lg font-bold hover:text-[var(--brand-green)] py-2">
                       Sign In
                     </Link>

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
@@ -33,6 +33,8 @@ import AcademicsHome from './pages/AcademicsHome';
 import AcademicsSubjects from './pages/AcademicsSubjects';
 import AcademicsSubjectDetail from './pages/AcademicsSubjectDetail';
 import AcademicsChapterDetail from './pages/AcademicsChapterDetail';
+import GuestExploreRoadmap from './pipelines/guestExplore/GuestExploreRoadmap';
+import GuestLearningMaterial from './pipelines/guestExplore/GuestLearningMaterial';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -92,6 +94,8 @@ function App() {
           <Route path="/careers" element={<Careers />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/explore/roadmap/:domainSlug" element={<GuestExploreRoadmap />} />
+          <Route path="/explore/lesson/:topicId" element={<GuestLearningMaterial />} />
 
           {/* Protected Student Routes */}
           <Route element={<ProtectedRoute allowedRoles={['student', 'admin']} />}>

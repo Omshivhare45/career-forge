@@ -9,6 +9,8 @@ const DOMAIN_ORDER = ['devops', 'dsa', 'web-development'];
 const GuestExplorePipeline = ({ onClose }) => {
   const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,7 +21,10 @@ const GuestExplorePipeline = ({ onClose }) => {
         if (active) setDomains(data.data || []);
       })
       .catch(() => {
-        if (active) toast.error('Could not load guest roadmaps. Please try again.');
+        if (active) {
+          setLoadError(true);
+          toast.error('Could not load guest roadmaps. Please try again.');
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -28,7 +33,7 @@ const GuestExplorePipeline = ({ onClose }) => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [retryCount]);
 
   const orderedDomains = DOMAIN_ORDER
     .map((slug) => domains.find((domain) => domain.slug === slug))
@@ -70,6 +75,21 @@ const GuestExplorePipeline = ({ onClose }) => {
         {loading ? (
           <div className="flex justify-center py-10" aria-label="Loading domains">
             <div className="h-9 w-9 animate-spin rounded-full border-4 border-[var(--brand-green)] border-t-transparent" />
+          </div>
+        ) : loadError ? (
+          <div className="py-8 text-center">
+            <p className="font-semibold text-slate-600">Could not load guest roadmaps. Please try again.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setLoading(true);
+                setLoadError(false);
+                setRetryCount((count) => count + 1);
+              }}
+              className="mt-4 rounded-xl bg-[var(--brand-green)] px-5 py-3 text-sm font-black text-white transition hover:opacity-90"
+            >
+              Retry
+            </button>
           </div>
         ) : orderedDomains.length ? (
           <div className="grid gap-3 sm:grid-cols-3">

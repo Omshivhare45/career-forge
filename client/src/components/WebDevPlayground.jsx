@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Editor from '@monaco-editor/react';
+import { useState, useEffect, useRef } from 'react';
+import CodeEditor from './CodeEditor';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { FiCode, FiLayout, FiSave, FiCheckCircle } from 'react-icons/fi';
+import { FiLayout, FiSave, FiCheckCircle } from 'react-icons/fi';
 
 const WebDevPlayground = ({ topicId, boilerplate, editorTheme }) => {
   const [files, setFiles] = useState({
@@ -36,7 +36,7 @@ const WebDevPlayground = ({ topicId, boilerplate, editorTheme }) => {
           });
           setLastSaved(new Date(res.data.data.lastSavedAt));
         }
-      } catch (err) {
+      } catch {
         console.error("Failed to fetch web dev project state:", err);
       } finally {
         setIsLoaded(true);
@@ -149,8 +149,7 @@ const WebDevPlayground = ({ topicId, boilerplate, editorTheme }) => {
         {/* Monaco Editor Container */}
         <div className="flex-1 md:w-1/2 relative border-b md:border-b-0 md:border-r border-[#3e3e42]">
           {isLoaded ? (
-            <Editor
-              height="100%"
+            <CodeEditor
               language={getLanguage(activeFile)}
               value={files[activeFile]}
               onChange={handleEditorChange}

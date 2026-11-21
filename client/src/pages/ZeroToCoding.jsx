@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { 
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import Editor from '@monaco-editor/react';
+import CodeEditor from '../components/CodeEditor';
 import { zeroToCodingMonacoLevels } from '../utils/zeroToCodingMonacoQuestions';
 
 // Synthesizer Sound Engine for high-fidelity interactive feedback
@@ -1034,8 +1034,7 @@ const ZeroToCoding = () => {
 
             {/* Monaco Component */}
             <div className="flex-1 relative overflow-hidden">
-              <Editor
-                height="100%"
+              <CodeEditor
                 language={selectedLang}
                 theme={theme === 'light' ? 'vs' : 'vs-dark'}
                 value={editorCode}

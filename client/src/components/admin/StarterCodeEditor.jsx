@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import MobileEditorNotice from '../MobileEditorNotice';
+import { useMobileViewport } from '../../utils/useMobileViewport';
 
 const languages = [
   { label: 'JavaScript', key: 'javascript' },
@@ -14,6 +16,7 @@ const StarterCodeEditor = ({
   onFunctionSignatureChange
 }) => {
   const [activeLanguage, setActiveLanguage] = useState('javascript');
+  const isMobile = useMobileViewport();
   const safeValue = value || {};
   const safeFunctionSignature = functionSignature || {};
 
@@ -57,17 +60,21 @@ const StarterCodeEditor = ({
         <label className="block text-[10px] font-black uppercase tracking-widest text-[#98a2b3] mb-2">
           Starter Code
         </label>
-        <textarea
-          value={safeValue[activeLanguage] || ''}
-          onChange={(event) =>
-            onChange({
-              ...safeValue,
-              [activeLanguage]: event.target.value
-            })
-          }
-          rows={18}
-          className="w-full rounded-2xl border border-[#d0d5dd] bg-[#0f172a] px-4 py-3 font-mono text-sm text-slate-100 outline-none focus:border-[#2563eb]"
-        />
+        {isMobile ? (
+          <MobileEditorNotice className="min-h-[300px] rounded-2xl border border-[#d0d5dd]" />
+        ) : (
+          <textarea
+            value={safeValue[activeLanguage] || ''}
+            onChange={(event) =>
+              onChange({
+                ...safeValue,
+                [activeLanguage]: event.target.value
+              })
+            }
+            rows={18}
+            className="w-full rounded-2xl border border-[#d0d5dd] bg-[#0f172a] px-4 py-3 font-mono text-sm text-slate-100 outline-none focus:border-[#2563eb]"
+          />
+        )}
       </div>
     </div>
   );

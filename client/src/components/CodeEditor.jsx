@@ -1,4 +1,6 @@
-import React, { Suspense, lazy, useRef, useEffect, memo } from 'react';
+import { Suspense, lazy, useRef, useEffect, memo } from 'react';
+import MobileEditorNotice from './MobileEditorNotice';
+import { useMobileViewport } from '../utils/useMobileViewport';
 
 const MonacoEditor = lazy(() => import('@monaco-editor/react'));
 
@@ -98,6 +100,7 @@ const CodeEditor = memo(({
 }) => {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
+  const isMobile = useMobileViewport();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -143,6 +146,10 @@ const CodeEditor = memo(({
     },
     ...options,
   };
+
+  if (isMobile) {
+    return <MobileEditorNotice className={className} />;
+  }
 
   return (
     <div ref={containerRef} className={`relative w-full h-full min-h-[200px] ${className}`}>

@@ -47,12 +47,16 @@ npm run dev
 
 ### 2. Database Seeding
 
-To populate the database with the default domains, roadmaps, and resources:
+An operator with database access can insert missing default curriculum and resources into a non-production database. Set `NODE_ENV` to `development` or `test` and provide `SEED_MONGODB_URI` in the operator's process environment, including the target database name. Use credentials scoped to that database. The CLI does not load application `.env` files.
+
 ```bash
 cd server
-npm run seed
+npm run seed -- --confirm-non-production
 ```
-*(Make sure MongoDB is running before running the seed script)*
+
+Startup and HTTP requests no longer seed data. To use seeded data in local development, point the app at the same persistent development database. Existing records keep their IDs and values. Run only one seed process at a time because some curriculum keys lack unique indexes. If a run fails partway through, correct the cause and rerun against the same target.
+
+Production seeding is blocked and there is no force or user reset option. Remove any scheduled calls to the former HTTP seed endpoint. If the JWT signing secret was passed in a seed URL, treat it as exposed and rotate it through the deployment secret manager. Audit any previously seeded administrator account and rotate its password or disable legacy password access if applicable.
 
 ### 3. Frontend Setup
 
@@ -66,8 +70,8 @@ Start the frontend development server:
 npm run dev
 ```
 
-## Default Roles
-- **Admin**: `admin@careerforge.com` / `Admin@123` (Created via seed script)
+## Roles
+- **Admin**: The non-production seed can optionally provision a new administrator when both `ADMIN_EMAIL` and `ADMIN_PASSWORD` are supplied in the operator's environment. Use a unique password of at least 16 characters and at most 72 UTF-8 bytes. Existing accounts are untouched. The sample problem seed requires an existing administrator or one provisioned during the run.
 - **Student**: Any new user that registers via the UI will be a student by default.
 
 ## License

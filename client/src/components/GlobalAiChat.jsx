@@ -7,10 +7,10 @@ import toast from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const GlobalAiChat = () => {
+const GlobalAiChat = ({ initiallyOpen = false }) => {
   const { user } = useAuth();
   const location = useLocation();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(initiallyOpen);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);

@@ -1,3 +1,4 @@
+const { readCurriculum } = require('../services/curriculumCache');
 const Domain = require('../models/Domain');
 const Phase = require('../models/Phase');
 const Topic = require('../models/Topic');
@@ -8,7 +9,15 @@ const Badge = require('../models/Badge');
 // @route   GET /api/domains
 exports.getDomains = async (req, res) => {
   try {
-    const domains = await Domain.find({ isActive: true }).sort('order');
+    // Public directory exposes only card metadata, including upcoming domains.
+    // Keep the default endpoint's active-only response unchanged.
+    if (req.query?.view === 'directory') {
+      const domains = await readCurriculum('domain-directory', () => Domain.find({})
+        .select('_id name slug shortDescription icon isActive order')
+        .sort('order').lean());
+      return res.json({ success: true, data: domains });
+    }
+    const domains = await readCurriculum('domains', () => Domain.find({ isActive: true }).sort('order').lean());
     res.json({ success: true, data: domains });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -22,9 +31,11 @@ exports.getDomain = async (req, res) => {
     const domain = await Domain.findById(req.params.id);
     if (!domain) return res.status(404).json({ success: false, message: 'Domain not found' });
     
-    const phases = await Phase.find({ domainId: domain._id }).sort('phaseNumber');
-    const assessments = await Assessment.find({ domainId: domain._id }).sort('order');
-    const badges = await Badge.find({ domainId: domain._id }).sort('order');
+    const [phases, assessments, badges] = await Promise.all([
+      Phase.find({ domainId: domain._id }).sort('phaseNumber').lean(),
+      Assessment.find({ domainId: domain._id }).sort('order').lean(),
+      Badge.find({ domainId: domain._id }).sort('order').lean(),
+    ]);
 
     res.json({ success: true, data: { domain, phases, assessments, badges } });
   } catch (error) {

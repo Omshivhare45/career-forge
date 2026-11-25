@@ -1,0 +1,51 @@
+/* Dashboard adaptation of Landing.jsx's pathway section. */
+.pathway-section {
+  container-type: inline-size;
+}
+
+.pathway-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 1rem;
+}
+
+@container (min-width: 40rem) {
+  .pathway-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container (min-width: 55rem) {
+  .pathway-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.pathway-card {
+  background: var(--land-bg);
+  box-shadow: var(--shadow-soft);
+  color: var(--land-text);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.dark .pathway-card {
+  border-color: color-mix(in srgb, var(--pathway-accent) 35%, var(--border));
+}
+
+.pathway-card:hover,
+.pathway-card:focus-within {
+  border-color: var(--pathway-accent);
+  box-shadow: var(--shadow-bubbly);
+}
+
+.pathway-icon {
+  background: var(--land-bg-alt);
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.06);
+}
+
+.pathway-link { color: var(--brand-green); }
+.pathway-link:hover { color: var(--brand-green-hover); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pathway-card { transition: none; }
+}
+
+.pathway-card--upcoming { box-shadow: none; }
+.pathway-card--upcoming:hover { border-color: var(--border); box-shadow: none; }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, Link, useLocation } from 'react-router-dom';
+import { loginPath } from '../utils/guestNavigation';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import logoImg from '../assets/logo.png';
@@ -82,7 +83,7 @@ const Navbar = ({ isAdmin, isScrolled = false, isVisible = true, isCompact = fal
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/dashboard', { replace: true });
   };
 
   const studentLinks = [
@@ -94,6 +95,7 @@ const Navbar = ({ isAdmin, isScrolled = false, isVisible = true, isCompact = fal
    
     { name: 'Roadmaps', path: '/roadmap', icon: <FiMap /> },
     { name: 'Domains', path: '/domains', icon: <FiList /> },
+    ...(!user ? [{ name: 'Academics', path: '/academics', icon: <FiBookOpen /> }] : []),
     { name: 'Code Guru', path: '/code-guru', icon: <FiMessageSquare /> },
 
     { name: 'Feedback', path: '/feedback', icon: <FiStar /> },
@@ -103,7 +105,8 @@ const Navbar = ({ isAdmin, isScrolled = false, isVisible = true, isCompact = fal
     { name: 'Admin Dashboard', path: '/admin', icon: <MdOutlineDashboard /> },
   ];
 
-  let links = [...(isAdmin ? adminLinks : studentLinks)];
+  const guestPaths = ['/dashboard', '/ide', '/roadmap', '/domains', '/academics'];
+  const links = isAdmin ? [...adminLinks] : studentLinks.filter((link) => user || guestPaths.includes(link.path));
   if (user?.role === 'admin') {
     if (isAdmin) {
       links.push({ name: 'View as Student', path: '/dashboard', icon: <FiEye className="text-[var(--secondary)]" /> });
@@ -219,6 +222,7 @@ const Navbar = ({ isAdmin, isScrolled = false, isVisible = true, isCompact = fal
               </motion.button>
             )}
 
+            {user ? (<>
             <div className="relative" ref={notifRef}>
               <button
                 onClick={() => {
@@ -319,6 +323,12 @@ const Navbar = ({ isAdmin, isScrolled = false, isVisible = true, isCompact = fal
                 )}
               </AnimatePresence>
             </div>
+            </>) : (
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] font-bold text-[var(--text-muted)]">Guest</span>
+                <Link to={loginPath(location)} className="btn-primary px-3 py-2 text-xs whitespace-nowrap">Sign In</Link>
+              </div>
+            )}
           </div>
         </div>
       </motion.header>

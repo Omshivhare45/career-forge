@@ -6,23 +6,12 @@ import {
   useEffect,
   useCallback,
 } from 'react';
-import api from '../api/axios';
+import api, { setApiSessionToken } from '../api/axios';
 
 const AuthContext = createContext(null);
 
-function readSavedUser() {
-  try {
-    const saved = localStorage.getItem('cf_user');
-    return saved && saved !== 'undefined'
-      ? JSON.parse(saved)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(readSavedUser);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,6 +19,7 @@ export function AuthProvider({ children }) {
 
     const restoreSession = async () => {
       const token = localStorage.getItem('cf_token');
+      localStorage.removeItem('cf_user');
 
       if (!token) {
         setLoading(false);
@@ -37,21 +27,18 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const { data } = await api.get('/auth/me');
+        const { data } = await api.get('/auth/me', { headers: { Authorization: 'Bearer ' + token } });
 
-        if (!cancelled) {
+        if (!cancelled && localStorage.getItem('cf_token') === token) {
+          setApiSessionToken(token);
           setUser(data.user);
-          localStorage.setItem(
-            'cf_user',
-            JSON.stringify(data.user)
-          );
         }
       } catch (error) {
         // Do not erase saved credentials on network/server errors.
         // A definitive 401 means the token is not accepted.
-        if (!cancelled && error.response?.status === 401) {
+        if (!cancelled && localStorage.getItem("cf_token") === token && error.response?.status === 401) {
+          setApiSessionToken(null);
           localStorage.removeItem('cf_token');
-          localStorage.removeItem('cf_user');
           setUser(null);
         }
       } finally {
@@ -71,24 +58,27 @@ export function AuthProvider({ children }) {
       token: googleToken,
     });
 
+    setApiSessionToken(data.token);
     localStorage.setItem('cf_token', data.token);
-    localStorage.setItem('cf_user', JSON.stringify(data.user));
     setUser(data.user);
 
     return data;
   };
 
   const logout = useCallback(() => {
+    setApiSessionToken(null);
     localStorage.removeItem('cf_token');
     localStorage.removeItem('cf_user');
     setUser(null);
   }, []);
 
   const refreshUser = async () => {
+    const token = localStorage.getItem('cf_token');
+    if (!token) return null;
     const { data } = await api.get('/auth/me');
+    if (localStorage.getItem('cf_token') !== token) return null;
 
     setUser(data.user);
-    localStorage.setItem('cf_user', JSON.stringify(data.user));
 
     return data.user;
   };

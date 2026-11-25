@@ -1,3 +1,4 @@
+import ProgramOutput from './ProgramOutput';
 import { Link } from 'react-router-dom';
 import {
   FiCode, FiPlay, FiCheckCircle, FiTerminal, FiArrowLeft,
@@ -61,6 +62,8 @@ export const CodeWorkspace = ({ ctx, variant }) => {
       `}>
         {isWebDevDomain ? (
           <WebDevPlayground
+          key={ctx.user?._id || "guest"}
+          canSave={ctx.canSaveTopic}
             topicId={id}
             boilerplate={{
               html: cpContent?.editorBoilerplate || '',
@@ -131,6 +134,7 @@ export const CodeWorkspace = ({ ctx, variant }) => {
                   />
                 </div>
 
+                {ctx.isDsaDomain ? <ProgramOutput ctx={ctx} /> : <>
                 {/* Run/Submit bar */}
                 <div className="px-4 py-2.5 bg-[#252526] border-t border-[#3e3e42] flex items-center gap-3 shrink-0">
                   <button
@@ -233,6 +237,7 @@ export const CodeWorkspace = ({ ctx, variant }) => {
                     )}
                   </div>
                 </div>
+                </>}
               </>
             )}
           </>
@@ -256,6 +261,8 @@ style={{
     >
       {isWebDevDomain ? (
         <WebDevPlayground
+          key={ctx.user?._id || "guest"}
+          canSave={ctx.canSaveTopic}
           topicId={id}
           boilerplate={{
             html: langContent?.editorBoilerplate || '',
@@ -333,6 +340,7 @@ style={{
             />
           </div>
 
+          {ctx.isDsaDomain ? <ProgramOutput ctx={ctx} /> : <>
           {/* Resizable handle between editor and bottom panel */}
           {!isPanelCollapsed && (
             <div
@@ -638,7 +646,7 @@ style={{
 
             {/* Terminal Actions Bottom sticky bar */}
             <div className={`bg-[#0b0b0d] border-t border-[var(--border)] px-4 py-3 flex justify-between items-center shrink-0 ${isPanelCollapsed ? 'hidden' : ''}`}>
-              <Link to="/roadmap" className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] text-[9px] font-black uppercase tracking-wider transition-colors shrink-0">
+              <Link to={ctx.roadmapLink} className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] text-[9px] font-black uppercase tracking-wider transition-colors shrink-0">
                 <FiArrowLeft size={10} /> Roadmap
               </Link>
 
@@ -646,6 +654,7 @@ style={{
                 <button
                   type="button"
                   onClick={async () => {
+                    if (!ctx.requireTopicProgress()) return;
                     if (window.confirm("Skip this challenge and mark it as passed?")) {
                       setCompilerStatus('passed');
                       ctx.setChallengePassed(true);
@@ -690,6 +699,7 @@ style={{
               </div>
             </div>
           </div>
+          </>}
         </>
       )}
     </div>

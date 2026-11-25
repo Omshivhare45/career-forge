@@ -1,3 +1,4 @@
+const { readCurriculum } = require('../services/curriculumCache');
 const Topic = require('../models/Topic');
 
 // @desc    Get topics for a phase
@@ -11,6 +12,19 @@ exports.getTopicsByPhase = async (req, res) => {
   }
 };
 
+exports.getDomainTopicIndex = async (req, res) => {
+  const { domainId } = req.params;
+  if (!/^[a-f\d]{24}$/i.test(domainId)) return res.status(400).json({ success: false, message: 'Invalid domain ID' });
+  try {
+    const topics = await readCurriculum('topic-index:' + domainId.toLowerCase(), () =>
+      Topic.find({ domainId, isActive: true })
+        .select('_id phaseId title difficulty isCheckpointModule order instructor youtubeLink checkpoints.id checkpoints.label checkpoints.youtubeLink')
+        .sort({ order: 1, _id: 1 }).lean());
+    res.json({ success: true, data: topics });
+  } catch {
+    res.status(500).json({ success: false, message: 'Could not load curriculum index' });
+  }
+};
 // @desc    Get single topic
 // @route   GET /api/topics/:id
 exports.getTopic = async (req, res) => {

@@ -1,16 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { validatedReturnPath } from '../utils/guestNavigation';
 import logoImg from '../assets/logo.png';
-import toast from 'react-hot-toast';
 import { BsLightningFill } from 'react-icons/bs';
-import { GoogleLogin } from '@react-oauth/google';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 const Login = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { googleLogin } = useAuth();
-  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const next = params.get('next');
 
   useEffect(() => {
     document.documentElement.classList.remove('dark');
@@ -47,54 +45,9 @@ const Login = () => {
           </div>
         </div>
 
-        <div className="bg-white p-10 rounded-3xl shadow-xl border border-gray-100">
+        <div className="bg-white p-4 sm:p-10 rounded-3xl shadow-xl border border-gray-100">
           <div className="w-full flex flex-col items-center">
-            <GoogleLogin
-              onSuccess={async (credentialResponse) => {
-                if (!credentialResponse.credential) {
-                  toast.error('Google did not return a credential');
-                  return;
-                }
-
-                setIsLoading(true);
-
-                try {
-                  const data = await googleLogin(
-                    credentialResponse.credential
-                  );
-
-                  toast.success('Welcome to CareerForge!');
-
-                  if (data.user.role === 'admin') {
-                    navigate('/admin');
-                  } else if (
-                    !data.user.activeDomain &&
-                    !data.user.selectedDomain
-                  ) {
-                    navigate('/domains');
-                  } else {
-                    navigate('/dashboard');
-                  }
-                } catch (error) {
-                  toast.error(
-                    error.response?.data?.message ||
-                      'Google login failed. Please try again.'
-                  );
-                } finally {
-                  setIsLoading(false);
-                }
-              }}
-              onError={() => toast.error('Google Sign-In failed')}
-              theme="filled_black"
-              shape="pill"
-              width="360"
-            />
-
-            {isLoading && (
-              <p className="text-sm text-gray-500 mt-3">
-                Signing you in...
-              </p>
-            )}
+            <GoogleSignInButton next={next} />
 
             <p className="text-[10px] text-gray-400 mt-2.5 font-bold text-center">
               Fastest & most secure way to sign in
@@ -103,8 +56,12 @@ const Login = () => {
 
           <div className="mt-6 pt-6 border-t border-gray-100 text-center">
             <p className="text-sm text-gray-500">
-              Sign in securely with your Google account to continue learning.
+              Sign in to save progress and run code.
             </p>
+            <Link to={validatedReturnPath(next) || "/dashboard"}
+              className="btn-secondary mt-4 inline-flex justify-center w-full px-4 py-3">
+              Explore as Guest
+            </Link>
           </div>
         </div>
       </div>

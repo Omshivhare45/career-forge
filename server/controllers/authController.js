@@ -191,11 +191,12 @@ exports.googleLogin = async (req, res) => {
 // @route   GET /api/auth/me
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
-      .select('-password')
-      .populate('activeDomain')
-      .populate({ path: 'earnedBadges.badgeId', populate: { path: 'domainId' } })
-      .populate('assignedMentor', 'fullName email');
+    const user = await req.user.populate([
+      'activeDomain',
+      { path: 'earnedBadges.badgeId', populate: { path: 'domainId' } },
+      { path: 'assignedMentor', select: 'fullName email' },
+    ]);
+    res.set('Cache-Control', 'private, no-store');
 
     res.json({ success: true, user });
   } catch (error) {

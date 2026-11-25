@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
+const { invalidateCurriculumOnWrite } = require('./services/curriculumCache');
 const errorHandler = require('./middleware/errorHandler');
 
 // Load env vars
@@ -40,11 +41,6 @@ app.use(cors({
   credentials: true
 }));
 
-// Logging
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-}
-
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -54,6 +50,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Routes
+app.use(["/api/domains", "/api/phases", "/api/topics"], invalidateCurriculumOnWrite);
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/domains', require('./routes/domains'));
 app.use('/api/phases', require('./routes/phases'));
@@ -82,27 +79,6 @@ app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'CareerForge API is running', timestamp: new Date() });
 });
 
-// Seed DB Migration trigger
-app.get('/api/health/seed-db-migration', async (req, res) => {
-  try {
-    const force = req.query.force === 'true';
-    const secret = req.query.secret;
-
-    if (!secret || secret !== process.env.JWT_SECRET) {
-      return res.status(403).json({ success: false, message: 'Forbidden: Invalid migration secret key.' });
-    }
-
-    console.log(`🔄 Manual seed trigger initiated (force: ${force})...`);
-    const seedDB = require('./seeds/seedAll');
-    await seedDB(force);
-    console.log('✅ Manual seed completed successfully');
-    res.json({ success: true, message: 'Database successfully seeded!' });
-  } catch (err) {
-    console.error('❌ Manual seed failed:', err.message);
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
 // Error handler
 app.use(errorHandler);
 
@@ -112,38 +88,11 @@ const startServer = async () => {
     await connectDB();
     
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, async () => {
+    app.listen(PORT, () => {
       console.log(`\n🔥 CareerForge Server running on port ${PORT}`);
       console.log(`📡 Environment: ${process.env.NODE_ENV}`);
       console.log(`🌐 Client URL: ${process.env.CLIENT_URL}\n`);
 
-      // User Collection Audit
-      try {
-        const User = require('./models/User');
-        const mongoose = require('mongoose');
-        const userCount = await User.countDocuments();
-        console.log(`📊 [Audit] Total Users in DB: ${userCount}`);
-        console.log(`📊 [Audit] Active Database: ${mongoose.connection.name}`);
-        console.log(`📊 [Audit] Collection Name: ${User.collection.name}\n`);
-      } catch (auditErr) {
-        console.error('❌ User Collection Audit failed:', auditErr.message);
-      }
-
-      // Auto-seed if empty (useful for In-Memory DB)
-      try {
-        const Domain = require('./models/Domain');
-        const domainCount = await Domain.countDocuments();
-        if (domainCount === 0 && process.env.NODE_ENV !== 'production') {
-          console.log('🌱 Database is empty. Running auto-seed...');
-          const seedDB = require('./seeds/seedAll');
-          await seedDB();
-          console.log('✅ Auto-seed completed!\n');
-        } else if (domainCount === 0 && process.env.NODE_ENV === 'production') {
-          console.log('⚠️ [Warning] Database is empty in production, but auto-seed is skipped to prevent accidental data loss/corruption.');
-        }
-      } catch (err) {
-        console.error('❌ Auto-seed check/execution failed:', err.message);
-      }
     });
   } catch (err) {
     console.error('❌ Server startup failed:', err.message);

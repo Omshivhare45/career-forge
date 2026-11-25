@@ -400,10 +400,11 @@ exports.submitAssessment = async (req, res) => {
 // @route   GET /api/progress/dashboard
 exports.getDashboard = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
-      .select('-password')
-      .populate('activeDomain')
-      .populate({ path: 'earnedBadges.badgeId', populate: { path: 'domainId' } });
+    const summary = req.query.view === 'summary';
+    const user = req.user;
+    await user.populate(summary
+      ? [{ path: 'activeDomain', select: 'name slug' }]
+      : ['activeDomain', { path: 'earnedBadges.badgeId', populate: { path: 'domainId' } }]);
 
     const activeDomain = user.activeDomain;
     const key = activeDomain ? getProgressKey(activeDomain.slug) : 'dsa';
@@ -416,47 +417,34 @@ exports.getDashboard = async (req, res) => {
       dsaStats: {}
     };
 
-    if (activeDomain && activeDomain.slug === 'dsa') {
-      updateDSAStats(user);
-      user.markModified('domainsProgress.dsa');
-      await user.save();
-    }
+    if (activeDomain?.slug === 'dsa') updateDSAStats(user);
 
-    // Populate completed topics title/details for dashboard compatibility
-    const completedWithDetails = [];
-    for (const item of (domainProgress.completedTopics || [])) {
-      const topic = await Topic.findById(item.topicId);
-      completedWithDetails.push({
-        ...item.toObject ? item.toObject() : item,
-        topicId: topic
-      });
-    }
-
-    let currentPhaseData = null;
-    let upcomingAssessment = null;
-
-    if (activeDomain) {
-      currentPhaseData = await Phase.findOne({ 
-        domainId: activeDomain._id, 
-        phaseNumber: (domainProgress.currentPhase !== undefined && domainProgress.currentPhase !== -1) ? domainProgress.currentPhase : 0
-      });
-
-      upcomingAssessment = await require('../models/Assessment').findOne({
-        domainId: activeDomain._id,
-        isActive: true
-      }).sort('order');
-    }
-
+    const completed = domainProgress.completedTopics || [];
+    const selected = summary ? completed.slice(-5) : completed;
+    const phaseNumber = Math.max(0, domainProgress.currentPhase ?? 0);
+    const topicQuery = selected.length && Topic.find({ _id: { $in: selected.map((item) => item.topicId) } });
+    if (summary && topicQuery) topicQuery.select('title');
+    const [topics, currentPhaseData, upcomingAssessment] = await Promise.all([
+      topicQuery ? topicQuery.lean() : [],
+      activeDomain ? Phase.findOne({ domainId: activeDomain._id, phaseNumber }).lean() : null,
+      activeDomain && !summary ? require('../models/Assessment').findOne({ domainId: activeDomain._id, isActive: true }).sort('order').lean() : null,
+    ]);
+    const byId = new Map(topics.map((topic) => [String(topic._id), topic]));
+    const completedWithDetails = selected.map((item) => ({
+      ...(summary ? { completedAt: item.completedAt } : (item.toObject?.() || item)),
+      topicId: byId.get(String(item.topicId)) || null,
+    }));
     const testsPassed = (domainProgress.testResults || []).filter(t => t.passed).length;
     const totalBadges = user.earnedBadges.length;
 
+    res.set("Cache-Control", "private, no-store");
     res.json({
       success: true,
       data: {
         user: {
           fullName: user.fullName,
           email: user.email,
-          profile: user.profile,
+          profile: summary ? undefined : user.profile,
           selectedDomain: activeDomain,
           activeDomain: activeDomain,
           currentPhase: (domainProgress.currentPhase !== undefined && domainProgress.currentPhase !== -1) ? domainProgress.currentPhase : 0,
@@ -466,16 +454,20 @@ exports.getDashboard = async (req, res) => {
           xp: domainProgress.xp || 0,
           totalXP: user.totalXP,
           dsaStats: domainProgress.dsaStats || {},
-          earnedBadges: user.earnedBadges,
+          earnedBadges: summary ? undefined : user.earnedBadges,
           completedTopics: completedWithDetails,
-          domainsProgress: user.domainsProgress
+          domainsProgress: summary ? Object.fromEntries(Object.entries((user.toObject().domainsProgress || {})).map(([key, progress]) => [key, {
+            overallProgress: progress.overallProgress,
+            completedTopicsCount: progress.completedTopics?.length || 0,
+            lastOpenedTopic: progress.lastOpenedTopic,
+          }])) : user.domainsProgress
         },
         currentPhaseData,
         upcomingAssessment,
         testsPassed,
         totalBadges,
-        completedTopicsCount: completedWithDetails.length,
-        activityLog: user.activityLog.slice(-365),
+        completedTopicsCount: completed.length,
+        activityLog: summary ? undefined : user.activityLog.slice(-365),
         recentActivity: completedWithDetails.slice(-5)
       }
     });

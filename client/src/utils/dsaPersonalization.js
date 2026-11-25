@@ -34,7 +34,104 @@ export const DSA_BADGES = [
 
 export const normalizeDsaLanguage = (language) => {
   if (language === 'js') return 'javascript';
-  return language || 'cpp';
+  return ['cpp', 'java', 'python', 'javascript'].includes(language) ? language : 'cpp';
+};
+
+export const DSA_TUTORS = {
+  STRIVER: 'striver',
+  BABBAR: 'babbar'
+};
+
+export const DSA_TUTOR_OPTIONS = [
+  { key: DSA_TUTORS.STRIVER, label: 'Striver A2Z', sublabel: 'A2Z Sheet' },
+  { key: DSA_TUTORS.BABBAR, label: 'Love Babbar', sublabel: 'C++ Placement' }
+];
+
+export const DSA_TUTOR_STORAGE_KEY = 'dsa_tutor';
+
+export const normalizeDsaTutor = (value, fallback = DSA_TUTORS.STRIVER) => {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'striver' || raw === 'a2z' || raw === 'striver-a2z' || raw === 'striver_a2z') {
+    return DSA_TUTORS.STRIVER;
+  }
+  if (raw === 'babbar' || raw === 'love-babbar' || raw === 'lovebabbar' || raw === 'love_babbar' || raw === 'default') {
+    return DSA_TUTORS.BABBAR;
+  }
+  return fallback;
+};
+
+export const readStoredDsaTutor = () => {
+  try {
+    const explicit = localStorage.getItem(DSA_TUTOR_STORAGE_KEY);
+    if (explicit) return normalizeDsaTutor(explicit);
+  } catch {
+    // localStorage can be unavailable in private mode.
+  }
+  return DSA_TUTORS.STRIVER;
+};
+
+export const writeStoredDsaTutor = (value) => {
+  const tutor = normalizeDsaTutor(value);
+  try {
+    localStorage.setItem(DSA_TUTOR_STORAGE_KEY, tutor);
+  } catch {
+    // Persistence is best-effort.
+  }
+  return tutor;
+};
+
+// Resolve ownership from an explicit tutor/source field first. The instructor
+// field is the explicit source identifier already stored on every DSA topic.
+// Titles are never inspected here.
+export const getTopicTutorKeys = (topic) => {
+  if (!topic) return [];
+
+  const explicit = topic.tutor ?? topic.dsaTutor ?? topic.tutorId ?? topic.source ?? topic.sourceId;
+  if (explicit) {
+    const raw = String(explicit).trim().toLowerCase();
+    if (raw === 'shared' || raw === 'both') return [DSA_TUTORS.STRIVER, DSA_TUTORS.BABBAR];
+    const normalized = normalizeDsaTutor(raw, null);
+    if (normalized) return [normalized];
+  }
+
+  const instructor = String(topic.instructor || '').trim().toLowerCase();
+  if (!instructor) return [];
+
+  const hasStriver = instructor.includes('striver');
+  const hasBabbar = instructor.includes('babbar');
+  if (hasStriver && hasBabbar) return [DSA_TUTORS.STRIVER, DSA_TUTORS.BABBAR];
+  if (hasStriver) return [DSA_TUTORS.STRIVER];
+  if (hasBabbar) return [DSA_TUTORS.BABBAR];
+  return [];
+};
+
+// Old db/cp keys lack a source and cannot safely identify a completed lesson.
+export const getDsaVideoDoneKey = (topicId, video) =>
+  video?.videoId && topicId
+    ? ['dsa_video_v2', video.tutor, topicId, video.key, video.videoId, video.start].join('_')
+    : null;
+
+export const readDsaVideoDone = (topicId, video) => {
+  const key = getDsaVideoDoneKey(topicId, video);
+  if (!key) return false;
+  try {
+    const scoped = localStorage.getItem(key);
+    if (scoped !== null) return scoped === 'true';
+    return !video.checkpointId && !video.start &&
+      localStorage.getItem('dsa_video_done_' + topicId + '_lib:' + video.videoId) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+export const writeDsaVideoDone = (topicId, video, done) => {
+  const key = getDsaVideoDoneKey(topicId, video);
+  if (!key) return;
+  try {
+    localStorage.setItem(key, String(done));
+  } catch {
+    // Persistence is best-effort.
+  }
 };
 
 export const getStreakRank = (streak = 0) => {

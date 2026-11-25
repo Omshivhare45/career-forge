@@ -1,12 +1,16 @@
+import { executeProgram } from '../utils/programExecution';
+import { getTopicEditorLanguage } from '../utils/editorLanguage';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../../api/axios';
 import codeApi from '../../../api/codeApi';
+import { roadmapPath } from '../../../utils/guestNavigation';
+import { useSignInPrompt } from '../../../hooks/useSignInPrompt';
 import { useAuth } from '../../../context/AuthContext';
 import { getDsaLanguageContent, getCheckpointContent } from '../../../utils/dsaContent';
-import { getDsaVideoList } from '../utils/dsaVideoCatalog';
+import { getDsaVideoList, resolveDsaLesson } from '../utils/dsaVideoCatalog';
 import { getWebDevLanguageContent, getWebDevCheckpointContent } from '../../../utils/webDevContent';
-import { getLessonAssessment, normalizeDsaLanguage } from '../../../utils/dsaPersonalization';
+import { getLessonAssessment, normalizeDsaLanguage, readStoredDsaTutor, writeStoredDsaTutor, getDsaVideoDoneKey, readDsaVideoDone, writeDsaVideoDone } from '../../../utils/dsaPersonalization';
 import {
   executeSandbox,
   getRank,
@@ -23,7 +27,10 @@ import toast from 'react-hot-toast';
 export const useDSATopic = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [lessonParams, setLessonParams] = useSearchParams();
+  const [dsaTutor, setDsaTutor] = useState(readStoredDsaTutor);
   const { user, refreshUser } = useAuth();
+  const promptSignIn = useSignInPrompt();
 
   const getProgressKey = (slug) => {
     if (!slug) return 'dsa';
@@ -47,6 +54,41 @@ export const useDSATopic = () => {
 
   // Topic state variables
   const [topic, setTopic] = useState(null);
+  const userDomainId = user?.activeDomain?._id || user?.activeDomain || user?.selectedDomain?._id || user?.selectedDomain;
+  const topicDomainId = topic?.domainId?._id || topic?.domainId;
+  const canSaveTopic = Boolean(user && topicDomainId && userDomainId === topicDomainId);
+  const requireTopicProgress = () => {
+    if (!user) promptSignIn();
+    else if (!canSaveTopic) toast('Select this domain to save topic progress.');
+    return canSaveTopic;
+  };
+  const isDsaDomain = topic?.domainId?.slug === 'dsa' || topic?.domainId === 'dsa' ||
+                      (typeof topic?.domainId === 'object' && topic?.domainId?.slug === 'dsa');
+  const topicVideos = useMemo(() =>
+    isDsaDomain ? getDsaVideoList(topic, dsaTutor) : [], [isDsaDomain, topic, dsaTutor]);
+  const activeVideo = isDsaDomain ? resolveDsaLesson(topic, topicVideos, lessonParams, dsaTutor) : null;
+  const selectDsaTutor = (tutor) => {
+    if (tutor === dsaTutor) return;
+    setDsaTutor(writeStoredDsaTutor(tutor));
+    const lessons = getDsaVideoList(topic, tutor);
+    const selected = resolveDsaLesson(topic, lessons, lessonParams, tutor);
+    if (selected?.videoId || !lessons.some((item) => item.videoId)) return;
+    setLessonParams((params) => {
+      const next = new URLSearchParams(params);
+      next.delete('cp');
+      next.delete('v');
+      return next;
+    }, { replace: true });
+  };
+  const activeVideoKey = activeVideo?.key || null;
+  const videoCheckpointId = activeVideo?.checkpointId;
+  const setActiveVideoKey = (key) => setLessonParams((params) => {
+    const next = new URLSearchParams(params);
+    next.delete('cp');
+    next.set('v', key);
+    return next;
+  });
+
   // Learning flow step state: 1=Video, 2=Assessment/Challenge, 'transition'=overlay
   const [learningStep, setLearningStep] = useState(1);
   const [isVideoFinished, setIsVideoFinished] = useState(false);
@@ -99,22 +141,24 @@ export const useDSATopic = () => {
   useEffect(() => {
     if (!id) return;
     setIsVideoFinished(false);
+    if (!canSaveTopic) { setLearningStep(1); return; }
     if (isCompleted) {
       setLearningStep(2);
     } else {
       const savedStep = localStorage.getItem(`dsa_learning_step_${id}`);
       setLearningStep(savedStep ? parseInt(savedStep, 10) : 1);
     }
-  }, [id, isCompleted]);
+  }, [id, isCompleted, canSaveTopic]);
 
   // Save learning step when it changes
   useEffect(() => {
-    if (!id || learningStep === undefined) return;
+    if (!canSaveTopic || !id || learningStep === undefined) return;
     localStorage.setItem(`dsa_learning_step_${id}`, learningStep.toString());
-  }, [id, learningStep]);
+  }, [id, learningStep, canSaveTopic]);
 
   // Custom Dynamic Languages & Tracks State
-  const [selectedLang, setSelectedLang] = useState(() => normalizeDsaLanguage(localStorage.getItem('dsa_lang') || 'cpp'));
+  const [workspaceLanguage, setSelectedLang] = useState(() => normalizeDsaLanguage(localStorage.getItem('dsa_lang') || 'cpp'));
+  const selectedLang = isDsaDomain ? normalizeDsaLanguage(workspaceLanguage) : workspaceLanguage;
   const [useStriverAdvanced, setUseStriverAdvanced] = useState(() => localStorage.getItem('striver_advanced') === 'true');
   const dsaCourse = useStriverAdvanced ? 'striver' : 'default';
 
@@ -200,18 +244,19 @@ export const useDSATopic = () => {
     return icons;
   }, [topic]);
 
-  const [activeCheckpoint, setActiveCheckpoint] = useState('cp1');
+  const [savedCheckpoint, setActiveCheckpoint] = useState('cp1');
+  const activeCheckpoint = videoCheckpointId || savedCheckpoint;
   const [checkpointVideoFinished, setCheckpointVideoFinished] = useState(false);
   const [checkpointCodePassed, setCheckpointCodePassed] = useState(false);
   // Track which checkpoints have been completed for this topic
   const [completedCheckpoints, setCompletedCheckpoints] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(`dsa_cp_done_${id}`) || '[]'); } catch { return []; }
+    try { return canSaveTopic ? JSON.parse(localStorage.getItem(`dsa_cp_done_${id}`) || '[]') : []; } catch { return []; }
   });
 
   useEffect(() => {
     if (id && topic) {
       const firstCp = (topic.checkpoints && topic.checkpoints.length > 0) ? topic.checkpoints[0].id : 'cp1';
-      const saved = localStorage.getItem(`dsa_checkpoint_${id}`) || firstCp;
+      const saved = (canSaveTopic && localStorage.getItem(`dsa_checkpoint_${id}`)) || firstCp;
 
       const urlParams = new URLSearchParams(window.location.search);
       const urlCp = urlParams.get('cp');
@@ -220,7 +265,7 @@ export const useDSATopic = () => {
 
       if (urlCp && validCps.includes(urlCp)) {
         setActiveCheckpoint(urlCp);
-        localStorage.setItem(`dsa_checkpoint_${id}`, urlCp);
+        if (canSaveTopic) localStorage.setItem(`dsa_checkpoint_${id}`, urlCp);
       } else if (validCps.includes(saved)) {
         setActiveCheckpoint(saved);
       } else {
@@ -234,16 +279,18 @@ export const useDSATopic = () => {
         setCompletedCheckpoints(JSON.parse(localStorage.getItem(`dsa_cp_done_${id}`) || '[]'));
       } catch { setCompletedCheckpoints([]); }
     }
-  }, [id, topic]);
+  }, [id, topic, canSaveTopic]);
 
   const markCheckpointComplete = (cpId) => {
+    if (!requireTopicProgress()) return;
     const updated = completedCheckpoints.includes(cpId) ? completedCheckpoints : [...completedCheckpoints, cpId];
     setCompletedCheckpoints(updated);
     localStorage.setItem(`dsa_cp_done_${id}`, JSON.stringify(updated));
     const idx = CHECKPOINTS.indexOf(cpId);
-    if (idx < CHECKPOINTS.length - 1) {
+    if (idx >= 0 && idx < CHECKPOINTS.length - 1) {
       const next = CHECKPOINTS[idx + 1];
       setActiveCheckpoint(next);
+      if (isDsaDomain) setActiveVideoKey('cp:' + next);
       localStorage.setItem(`dsa_checkpoint_${id}`, next);
       setCheckpointVideoFinished(false);
       setCheckpointCodePassed(false);
@@ -287,6 +334,13 @@ export const useDSATopic = () => {
       setEditorTheme('vs-dark');
       localStorage.setItem('careerforge_theme', 'dark');
     }
+    // Keep Layout and Navbar state in sync with this workspace's toggle.
+    window.dispatchEvent(new Event('themechange'));
+  }, []);
+
+  // A route change during dragging should never leave the next page unselectable.
+  useEffect(() => () => {
+    document.body.classList.remove('workspace-dragging');
   }, []);
 
   // Window mouse resize dragging event listeners
@@ -357,16 +411,16 @@ export const useDSATopic = () => {
 
   // Sync initial language with user profile onboarding answers
   useEffect(() => {
-    if (user?.profile?.onboardingAnswers?.dsa_language) {
+    if (isDsaDomain && user?.profile?.onboardingAnswers?.dsa_language) {
       const savedLang = normalizeDsaLanguage(localStorage.getItem('dsa_lang') || user.profile.onboardingAnswers.dsa_language);
       setSelectedLang(savedLang);
     }
-  }, [user]);
+  }, [user, isDsaDomain]);
 
   // Save selected settings to local persistence
   useEffect(() => {
-    localStorage.setItem('dsa_lang', selectedLang);
-  }, [selectedLang]);
+    if (isDsaDomain) localStorage.setItem('dsa_lang', selectedLang);
+  }, [selectedLang, isDsaDomain]);
 
   useEffect(() => {
     localStorage.setItem('striver_advanced', useStriverAdvanced.toString());
@@ -381,13 +435,14 @@ export const useDSATopic = () => {
   }, [id]);
 
   const fetchSubmissions = useCallback(async () => {
+    if (!user) return;
     try {
       const res = await api.get(`/progress/submissions/${id}`);
       setSubmissions(res.data.data || []);
     } catch (err) {
       console.error('Failed to fetch submissions:', err);
     }
-  }, [id]);
+  }, [id, user?._id]);
 
   const fetchTopic = useCallback(async () => {
     try {
@@ -396,18 +451,9 @@ export const useDSATopic = () => {
       const fetchedTopic = res.data.data;
       setTopic(fetchedTopic);
 
-      const isWebDev = fetchedTopic?.domainId?.slug === 'web-development' || fetchedTopic?.domainId === 'web-development' ||
-                        (typeof fetchedTopic?.domainId === 'object' && fetchedTopic?.domainId?.slug === 'web-development');
-      if (isWebDev) {
-        const titleLower = (fetchedTopic?.title || '').toLowerCase();
-        if (titleLower.includes('html')) {
-          setSelectedLang('html');
-        } else if (titleLower.includes('css')) {
-          setSelectedLang('css');
-        } else {
-          setSelectedLang('javascript');
-        }
-      }
+      const topicLanguage = getTopicEditorLanguage(fetchedTopic,
+        localStorage.getItem('dsa_lang') || user?.profile?.onboardingAnswers?.dsa_language);
+      if (topicLanguage) setSelectedLang(topicLanguage);
 
       // Reset ALL interactive playground variables on topic navigation
       setChallengePassed(false);
@@ -428,17 +474,17 @@ export const useDSATopic = () => {
       const isStarted = activeDomainProgress.startedTopics?.some(t => t.topicId === id || t.topicId?._id === id);
       const isCompletedTopic = activeDomainProgress.completedTopics?.some(t => t.topicId === id || t.topicId?._id === id);
 
-      if (user && !isStarted && !isCompletedTopic) {
+      const matchesUserDomain = user && userDomainId === (fetchedTopic.domainId?._id || fetchedTopic.domainId);
+      if (matchesUserDomain && !isStarted && !isCompletedTopic) {
         await api.post('/progress/start-topic', { topicId: id });
       }
 
       // Fetch submissions for submissions history list
-      fetchSubmissions();
-      if (user) {
-        refreshUser();
+      if (matchesUserDomain) {
+        fetchSubmissions();
       }
 
-      if (isCompletedTopic) {
+      if (matchesUserDomain && isCompletedTopic) {
         const completedData = activeDomainProgress.completedTopics?.find(t => t.topicId === id || t.topicId?._id === id);
         if (completedData) {
           setNotes(completedData.notes || '');
@@ -457,8 +503,6 @@ export const useDSATopic = () => {
   }, [id, user, activeDomainProgress.completedTopics, activeDomainProgress.startedTopics, fetchSubmissions, refreshUser, navigate]);
 
   // Dynamic boilerplate loaders
-  const isDsaDomain = topic?.domainId?.slug === 'dsa' || topic?.domainId === 'dsa' ||
-                      (typeof topic?.domainId === 'object' && topic?.domainId?.slug === 'dsa');
   const isWebDevDomain = topic?.domainId?.slug === 'web-development' || topic?.domainId === 'web-development' ||
                         (typeof topic?.domainId === 'object' && topic?.domainId?.slug === 'web-development');
   const shouldSplitWorkspace = isDsaDomain || isWebDevDomain;
@@ -474,7 +518,7 @@ export const useDSATopic = () => {
   }, [isWebDevDomain, topic]);
 
   const isCheckpointModule = shouldSplitWorkspace && (topic?.isCheckpointModule === true || (topic?.title || '').toLowerCase() === 'start coding');
-  const isCheckpointMode = isCheckpointModule;
+  const isCheckpointMode = isDsaDomain ? Boolean(videoCheckpointId) : isCheckpointModule;
 
   const langContent = useMemo(() => {
     if (isDsaDomain) {
@@ -493,8 +537,7 @@ export const useDSATopic = () => {
   // any topic that carries checkpoints (e.g. DSA Cheat Sheet sheet-jumps), so compute
   // content whenever checkpoints exist, not only for isCheckpointModule topics.
   const activeCheckpointContent = useMemo(() => {
-    const hasCheckpointVideos = isDsaDomain && Array.isArray(topic?.checkpoints) && topic.checkpoints.length > 0;
-    if (!isCheckpointModule && !hasCheckpointVideos) return null;
+    if (!isCheckpointMode) return null;
     if (isDsaDomain) {
       return getCheckpointContent(activeCheckpoint, selectedLang, dsaCourse);
     }
@@ -502,76 +545,28 @@ export const useDSATopic = () => {
       return getWebDevCheckpointContent(activeCheckpoint, selectedLang);
     }
     return null;
-  }, [isCheckpointModule, isDsaDomain, isWebDevDomain, activeCheckpoint, selectedLang, dsaCourse]);
+  }, [isCheckpointMode, isDsaDomain, isWebDevDomain, activeCheckpoint, selectedLang, dsaCourse]);
 
   // isLastCheckpoint comes from the content data itself — no hardcoding
   const isLastCp = activeCheckpointContent?.isLastCheckpoint || false;
 
-  // For checkpoint module: use the unique embed URL baked into each checkpoint
-  // Each checkpoint has its own pre-built videoEmbedUrl — NEVER the same video twice
-  const checkpointVideoEmbedUrl = useMemo(() => {
-    if (!activeCheckpointContent?.videoEmbedUrl) return null;
-    return activeCheckpointContent.videoEmbedUrl;
-  }, [activeCheckpointContent]);
-
-  // ─── DSA video catalog (many videos per topic) ─────────────────────────────
-  // The workspace lists every video via getDsaVideoList; the active selection
-  // drives the main player. Non-DSA domains keep the original single-video flow.
-  const topicVideos = useMemo(() => (isDsaDomain ? getDsaVideoList(topic) : null), [isDsaDomain, topic]);
-
-  const defaultVideoKey = useMemo(() => {
-    if (!topicVideos || topicVideos.length === 0) return null;
-    let fromUrl = null;
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const vParam = urlParams.get('v');
-      if (vParam && topicVideos.some((x) => x.key === vParam)) {
-        fromUrl = vParam;
-      } else {
-        const cpParam = urlParams.get('cp');
-        if (cpParam && topicVideos.some((x) => x.key === `cp:${cpParam}`)) fromUrl = `cp:${cpParam}`;
-      }
-    } catch (err) {
-      console.warn('Failed to read video URL param', err);
-    }
-    return fromUrl || topicVideos[0].key;
-  }, [topicVideos]);
-
-  const [activeVideoKey, setActiveVideoKey] = useState(defaultVideoKey);
-
-  useEffect(() => {
-    setActiveVideoKey(defaultVideoKey);
-  }, [defaultVideoKey]);
-
-  const activeVideo = useMemo(() => {
-    if (!topicVideos || topicVideos.length === 0) return null;
-    return topicVideos.find((v) => v.key === activeVideoKey) || topicVideos[0] || null;
-  }, [topicVideos, activeVideoKey]);
-
-  // Selecting a checkpoint video also selects that checkpoint so the existing
-  // checkpoint content (video embed, challenge, editor) is driven correctly.
-  useEffect(() => {
-    if (activeVideo?.type === 'checkpoint' && activeVideo.checkpointId) {
-      setActiveCheckpoint(activeVideo.checkpointId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeVideoKey, id]);
-
+  const [videoCompletion, setVideoCompletion] = useState({});
+  const isDsaVideoDone = (topicId, video) => {
+    if (!canSaveTopic) return false;
+    const key = getDsaVideoDoneKey(topicId, video);
+    return key ? videoCompletion[key] ?? readDsaVideoDone(topicId, video) : false;
+  };
+  const activeCompletionKey = getDsaVideoDoneKey(id, activeVideo);
+  const setDsaVideoFinished = useCallback((done) => {
+    if (!canSaveTopic || !activeCompletionKey) return;
+    writeDsaVideoDone(id, activeVideo, done);
+    setVideoCompletion((previous) => ({ ...previous, [activeCompletionKey]: done }));
+  }, [id, activeVideo, activeCompletionKey, canSaveTopic]);
+  const checkpointVideoEmbedUrl = isDsaDomain
+    ? (videoCheckpointId ? activeVideo.embedUrl : null)
+    : activeCheckpointContent?.videoEmbedUrl || null;
   const activeVideoEmbedUrl = useMemo(() => {
-    if (isDsaDomain) {
-      if (activeVideo?.type === 'tutorial') {
-        if (activeVideo.videoId) {
-          let url = `https://www.youtube.com/embed/${activeVideo.videoId}?rel=0&modestbranding=1&showinfo=0`;
-          if (activeVideo.playlistId) {
-            url += `&list=${activeVideo.playlistId}`;
-          }
-          return url;
-        }
-        return topic?.youtubeLink ? getYouTubeEmbedUrl(topic.youtubeLink) : null;
-      }
-      // Checkpoint videos use the checkpoint player, not the tutorial player.
-      return null;
-    }
+    if (isDsaDomain) return activeVideo?.type === 'tutorial' ? activeVideo.embedUrl : null;
     if (langContent?.youtubeVideoId) {
       if (langContent.youtubeVideoId.length === 11) {
         let url = `https://www.youtube.com/embed/${langContent.youtubeVideoId}?rel=0&modestbranding=1&showinfo=0`;
@@ -595,7 +590,7 @@ export const useDSATopic = () => {
   // The backend contract is unchanged: POST /progress/video-progress with
   // { checkpointId, timestamp, currentCheckpoint, lastOpenedTopic }.
   const persistVideoProgress = useCallback((checkpointId, timestamp) => {
-    if (!id || !checkpointId || !Number.isFinite(Number(timestamp))) return;
+    if (!canSaveTopic || !id || !checkpointId || !Number.isFinite(Number(timestamp))) return;
     api.post('/progress/video-progress', {
       checkpointId,
       timestamp: Math.max(0, Math.round(Number(timestamp))),
@@ -604,11 +599,11 @@ export const useDSATopic = () => {
     }).catch(() => {
       // Best-effort persistence; a transient network error must not stop video.
     });
-  }, [id]);
+  }, [id, canSaveTopic]);
 
   const savedVideoProgress = user?.domainsProgress?.[activeDomainKey]?.videoProgress;
-  const checkpointProgressKey = `${activeDomainKey}_${id}_${activeCheckpoint}`;
-  const tutorialProgressKey = `tutorial_${id}`;
+  const checkpointProgressKey = activeCompletionKey || `${activeDomainKey}_${id}_${activeCheckpoint}`;
+  const tutorialProgressKey = activeCompletionKey || `tutorial_${id}`;
 
   const checkpointResumeTime = savedVideoProgress?.checkpointId === checkpointProgressKey
     ? Number(savedVideoProgress.timestamp) || 0
@@ -619,65 +614,53 @@ export const useDSATopic = () => {
 
   const handleCheckpointPlayerStateChange = useCallback((event) => {
     const state = event.data;
-    if (state === 0) {
-      setCheckpointVideoFinished(true);
-      if (isDsaDomain && activeVideo?.key) {
-        try {
-          localStorage.setItem(`dsa_video_done_${id}_${activeVideo.key}`, 'true');
-        } catch {
-          // Ignore storage quota / privacy-mode failures.
-        }
-      }
+    if (state === 0 && canSaveTopic) {
+      if (isDsaDomain) setDsaVideoFinished(true);
+      else setCheckpointVideoFinished(true);
       toast.success('Checkpoint tutorial completed! Challenge unlocked! 🔓');
     }
 
     if (state === 0 || state === 1 || state === 2) {
       try {
-        persistVideoProgress(`${activeDomainKey}_${id}_${activeCheckpoint}`, event.target.getCurrentTime());
+        persistVideoProgress(checkpointProgressKey, event.target.getCurrentTime());
       } catch {
         // The player was destroyed between the event and this handler.
       }
     }
-  }, [activeCheckpoint, activeDomainKey, activeVideo, id, isDsaDomain, persistVideoProgress, setCheckpointVideoFinished]);
+  }, [checkpointProgressKey, isDsaDomain, persistVideoProgress, setDsaVideoFinished, canSaveTopic]);
 
   const handleCheckpointBeforeDestroy = useCallback((player) => {
     try {
-      persistVideoProgress(`${activeDomainKey}_${id}_${activeCheckpoint}`, player.getCurrentTime());
+      persistVideoProgress(checkpointProgressKey, player.getCurrentTime());
     } catch {
       // Player already torn down.
     }
-  }, [activeCheckpoint, activeDomainKey, id, persistVideoProgress]);
+  }, [checkpointProgressKey, persistVideoProgress]);
 
   const handleTutorialPlayerStateChange = useCallback((event) => {
     const state = event.data;
-    if (state === 0) {
-      setIsVideoFinished(true);
-      if (isDsaDomain && activeVideo?.key) {
-        try {
-          localStorage.setItem(`dsa_video_done_${id}_${activeVideo.key}`, 'true');
-        } catch {
-          // Ignore storage quota / privacy-mode failures.
-        }
-      }
+    if (state === 0 && canSaveTopic) {
+      if (isDsaDomain) setDsaVideoFinished(true);
+      else setIsVideoFinished(true);
       toast.success('Tutorial video completed! Assessment is now unlocked! 🔓');
     }
 
     if (state === 0 || state === 1 || state === 2) {
       try {
-        persistVideoProgress(`tutorial_${id}`, event.target.getCurrentTime());
+        persistVideoProgress(tutorialProgressKey, event.target.getCurrentTime());
       } catch {
         // The player was destroyed between the event and this handler.
       }
     }
-  }, [activeVideo, id, isDsaDomain, persistVideoProgress, setIsVideoFinished]);
+  }, [tutorialProgressKey, isDsaDomain, persistVideoProgress, setDsaVideoFinished, canSaveTopic]);
 
   const handleTutorialBeforeDestroy = useCallback((player) => {
     try {
-      persistVideoProgress(`tutorial_${id}`, player.getCurrentTime());
+      persistVideoProgress(tutorialProgressKey, player.getCurrentTime());
     } catch {
       // Player already torn down.
     }
-  }, [id, persistVideoProgress]);
+  }, [tutorialProgressKey, persistVideoProgress]);
 
   // These flags mirror exactly which VideoPlayer variant is mounted, so we never
   // attach a player to an iframe that does not exist.
@@ -705,7 +688,7 @@ export const useDSATopic = () => {
 
   // Reset boilerplate when topic, language, or difficulty changes
   useEffect(() => {
-    if (langContent?.editorBoilerplate) {
+    if ((!isDsaDomain || !isCheckpointMode) && langContent?.editorBoilerplate) {
       setEditorCode(langContent.editorBoilerplate);
       setTestResults([]);
       setConsoleLogs([]);
@@ -713,11 +696,12 @@ export const useDSATopic = () => {
       setChallengePassed(false);
       setTerminalOutput(null);
     }
-  }, [langContent]);
+  }, [langContent, isDsaDomain, isCheckpointMode]);
 
   // Reset editor boilerplate when the active checkpoint changes
   useEffect(() => {
-    if (isCheckpointModule && activeCheckpointContent?.editorBoilerplate) {
+    if (isCheckpointMode && activeCheckpointContent?.editorBoilerplate) {
+      setCheckpointCodePassed(false);
       setEditorCode(activeCheckpointContent.editorBoilerplate);
       setTestResults([]);
       setConsoleLogs([]);
@@ -725,7 +709,7 @@ export const useDSATopic = () => {
       setChallengePassed(false);
       setTerminalOutput(null);
     }
-  }, [isCheckpointModule, activeCheckpointContent]);
+  }, [isCheckpointMode, activeCheckpointContent]);
 
   // Restores a historical submission back into the editor
   const handleLoadSubmission = (subCode, subLang) => {
@@ -867,8 +851,28 @@ export const useDSATopic = () => {
     };
   };
 
+  const handleRunProgram = async () => {
+    if (!user) return promptSignIn('Sign in to run code.');
+    if (compilerStatus === 'running') return;
+    setCompilerStatus('running');
+    setIsPanelCollapsed(false);
+    setActiveConsoleTab('result');
+    setTerminalOutput(null);
+    setTestResults([]);
+    try {
+      const output = await executeProgram(codeApi.execute, currentLangName, editorCode, customInput ?? '');
+      setTerminalOutput(output);
+      setCompilerStatus(output.executionStatus ? 'failed' : 'passed');
+    } catch (error) {
+      setCompilerStatus('failed');
+      setTerminalOutput({ stdout: '', stderr: error.response?.data?.message || error.message || 'Execution failed.', executionStatus: 'Execution failed' });
+    }
+  };
+
   // Shared run-code handler — wired via data so every topic uses the same flow
   const handleRunCode = async () => {
+    if (isDsaDomain) return handleRunProgram();
+    if (!user) return promptSignIn("Sign in to run code.");
     setChallengePassed(false);
     setCompilerStatus('running');
     setActiveConsoleTab('result');
@@ -949,6 +953,8 @@ export const useDSATopic = () => {
 
   // Checkpoint run — uses checkpoint test cases + function name
   const handleCheckpointRunCode = async () => {
+    if (isDsaDomain) return handleRunProgram();
+    if (!user) return promptSignIn("Sign in to run code.");
     const cpContent = activeCheckpointContent;
     if (!cpContent) return;
     setChallengePassed(false);
@@ -996,6 +1002,7 @@ export const useDSATopic = () => {
   };
 
   const handleGamificationUpdate = () => {
+    if (!canSaveTopic) return;
     let totalXP = parseInt(localStorage.getItem('dsa_total_xp') || '0', 10);
     let streak = parseInt(localStorage.getItem('dsa_streak') || '0', 10);
     let lastSolveDate = localStorage.getItem('dsa_last_solve_date') || '';
@@ -1072,6 +1079,7 @@ export const useDSATopic = () => {
 
   // Submits the code attempt, persisting to backend
   const handleSubmitCode = async () => {
+    if (!requireTopicProgress()) return;
     setChallengePassed(false); // CRITICAL BUG FIX: Reset on submit
     setCompilerStatus('running');
     setActiveConsoleTab('result');
@@ -1216,6 +1224,7 @@ export const useDSATopic = () => {
   // Submit topic complete manually
   const handleComplete = async (e) => {
     if (e) e.preventDefault();
+    if (!requireTopicProgress()) return;
     setSubmitting(true);
     try {
       const res = await api.post('/progress/complete-topic', {
@@ -1254,6 +1263,7 @@ export const useDSATopic = () => {
 
   // Checkpoint complete + claim rewards (all checkpoints done)
   const handleCheckpointCompleteTopic = async () => {
+    if (!requireTopicProgress()) return;
     try {
       setSubmitting(true);
       await api.post('/progress/complete-topic', {
@@ -1328,6 +1338,7 @@ export const useDSATopic = () => {
   };
 
   const handleOpenInNewTab = () => {
+    if (!user) return promptSignIn("Sign in to open a separate preview.");
     const blob = new Blob([editorCode], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
@@ -1336,7 +1347,8 @@ export const useDSATopic = () => {
   return {
     // routing + auth
     id, navigate,
-    user, refreshUser,
+    user, refreshUser, requireTopicProgress, canSaveTopic,
+    roadmapLink: roadmapPath(topicDomainId),
     // domain/progress
     activeDomainSlug, activeDomainKey, activeDomainProgress,
     isCompleted, nextTopic, prevTopic, allTopics,
@@ -1384,6 +1396,7 @@ export const useDSATopic = () => {
     isDsaDomain, isWebDevDomain, shouldSplitWorkspace, availableLanguages,
     // workspace video catalog
     topicVideos, activeVideo, activeVideoKey, setActiveVideoKey,
+    dsaTutor, selectDsaTutor, isDsaVideoDone, setDsaVideoFinished,
     // content
     langContent, activeCheckpointContent, checkpointVideoEmbedUrl, activeVideoEmbedUrl,
     // layout

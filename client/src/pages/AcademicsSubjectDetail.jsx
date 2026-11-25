@@ -1,3 +1,4 @@
+import GlobalLoader from '../components/GlobalLoader';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
@@ -15,70 +16,15 @@ const AcademicsSubjectDetail = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchSubjectAndChapters();
+    const controller = new AbortController();
+    setLoading(true);
+    api.get('/academics/chapters', { params: { subjectId }, signal: controller.signal })
+      .then(({ data }) => { setSubject(data.subject); setChapters(data.data || []); })
+      .catch(() => { if (!controller.signal.aborted) { setSubject(null); toast.error('Failed to load chapters'); } })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [subjectId]);
-
-  const fetchSubjectAndChapters = async () => {
-    try {
-      // 1. Fetch semesters and branches to re-create breadcrumbs
-      const [subjectsRes, chaptersRes] = await Promise.all([
-        api.get('/academics/semesters').then(async (semRes) => {
-          const branchesRes = await api.get('/academics/branches');
-          const semesters = semRes.data.data;
-          const branches = branchesRes.data.data;
-          
-          // Fetch current subject
-          const subjRes = await api.get('/academics/subjects?semesterId=' + semesters[0]._id + '&branchId=' + branches[0]._id);
-          // Let's query details by making sure we get the subject from the lists
-          return { semesters, branches };
-        }),
-        api.get(`/academics/chapters?subjectId=${subjectId}`)
-      ]);
-
-      // Instead of relying on first semester, let's fetch all subjects in the current semester and find this subject
-      // Better yet, let's fetch semesters and search all subject combinations, or we can just fetch the subjects directly from the server.
-      // Wait, we have an API GET /api/academics/subjects?semesterId=...&branchId=...
-      // Since we don't have the semesterId and branchId in params here, how do we get subject details?
-      // Wait! We can get the subject details from the subjects list by scanning all semesters, or we can add a backend route, OR we can query it easily.
-      // Actually, let's check: the `getChapters` endpoint returns chapters.
-      // Wait, we can fetch all semesters and branches, and find which combination returns our subject! That is a very safe and robust fallback.
-      const semesters = subjectsRes.semesters;
-      const branches = subjectsRes.branches;
-      
-      let foundSubject = null;
-      let foundSemester = null;
-      let foundBranch = null;
-
-      for (const sem of semesters) {
-        for (const br of branches) {
-          const res = await api.get(`/academics/subjects?semesterId=${sem._id}&branchId=${br._id}`);
-          const s = res.data.data.find(x => x._id === subjectId);
-          if (s) {
-            foundSubject = s;
-            foundSemester = sem;
-            foundBranch = br;
-            break;
-          }
-        }
-        if (foundSubject) break;
-      }
-
-      setSubject(foundSubject);
-      setChapters(chaptersRes.data.data || []);
-    } catch (err) {
-      toast.error('Failed to load chapters');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-[80vh]">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-[var(--primary)] border-t-transparent"></div>
-      </div>
-    );
-  }
+  if (loading) return <GlobalLoader fullScreen={false} title="Loading your subject" />;
 
   if (!subject) {
     return (

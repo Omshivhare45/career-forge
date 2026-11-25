@@ -45,7 +45,7 @@ const TopicSidebar = ({ ctx, mode }) => {
 
         {/* Minimal Header */}
         <div className="p-5 border-b border-[var(--border)] bg-[var(--bg-card)] shrink-0 transition-all duration-500">
-          <Link to="/roadmap" className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] text-[9px] font-black uppercase tracking-widest mb-4 transition-colors group">
+          <Link to={ctx.roadmapLink} className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] text-[9px] font-black uppercase tracking-widest mb-4 transition-colors group">
             <FiArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back to Roadmap
           </Link>
           <div className="flex items-center gap-3 mb-5">
@@ -110,7 +110,7 @@ const TopicSidebar = ({ ctx, mode }) => {
                 onClick={() => {
                   if (isLocked) { toast.error('Complete the previous checkpoint first! 🔒'); return; }
                   setActiveCheckpoint(cpId);
-                  localStorage.setItem(`dsa_checkpoint_${id}`, cpId);
+                  if (ctx.canSaveTopic) localStorage.setItem(`dsa_checkpoint_${id}`, cpId);
                   setCheckpointVideoFinished(false);
                   setCheckpointCodePassed(false);
                   setEditorCode('');
@@ -175,6 +175,7 @@ const TopicSidebar = ({ ctx, mode }) => {
               </div>
               <button
                 onClick={async () => {
+                  if (!ctx.requireTopicProgress()) return;
                   try {
                     setSubmitting(true);
                     const api = (await import('../../../api/axios')).default;
@@ -207,7 +208,7 @@ const TopicSidebar = ({ ctx, mode }) => {
       isSidebarOpen ? 'w-80 border-r border-[var(--border)] opacity-100' : 'w-0 opacity-0 overflow-hidden'
     }`}>
       <div className="w-80 p-5 flex-1">
-        <Link to="/roadmap" className="flex items-center gap-2 text-[var(--text-light)] font-black text-[9px] uppercase tracking-widest mb-6 hover:text-[var(--primary)] transition-colors group">
+        <Link to={ctx.roadmapLink} className="flex items-center gap-2 text-[var(--text-light)] font-black text-[9px] uppercase tracking-widest mb-6 hover:text-[var(--primary)] transition-colors group">
           <FiArrowLeft className="group-hover:-translate-x-0.5 transition-transform" /> BACK TO MAP
         </Link>
 

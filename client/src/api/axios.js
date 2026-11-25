@@ -26,22 +26,19 @@ const baseURL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl.replace(/\
 
 console.log('🔌 Axios API baseURL:', baseURL);
 
-const api = axios.create({
-  baseURL,
-  headers: { 'Content-Type': 'application/json' }
-});
+const api = axios.create({ baseURL });
+
+let sessionToken = null;
+
+export const setApiSessionToken = (token) => {
+  sessionToken = token;
+};
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('cf_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (!config.skipAuth && sessionToken && !config.headers.has("Authorization")) {
+    config.headers.set("Authorization", "Bearer " + sessionToken);
+  }
   return config;
 });
-
-
-api.interceptors.response.use(
-  (response) => response,
-  (error) => Promise.reject(error)
-);
-
 
 export default api;

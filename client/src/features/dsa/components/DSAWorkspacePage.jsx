@@ -1,26 +1,31 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../../api/axios';
+import { getDomain, getDomainTopics } from '../../../api/curriculum';
 import { useAuth } from '../../../context/AuthContext';
 import { FiMenu, FiChevronRight, FiCheckCircle, FiPlay, FiZap, FiBookOpen } from 'react-icons/fi';
+import { getDsaTopicNeighbors, getDsaTopicPath, getDsaTrackSections } from '../utils/dsaVideoCatalog';
+import { DSA_TUTORS, DSA_TUTOR_OPTIONS, readDsaVideoDone, readStoredDsaTutor, writeStoredDsaTutor } from '../../../utils/dsaPersonalization';
 import WorkspaceSidebar from './WorkspaceSidebar';
 import { VideoPlayer } from './VideoPlayer';
-import ProblemSection from './ProblemSection';
-import { CodeWorkspace } from './CodeWorkspace';
+const ProblemSection = lazy(() => import('./ProblemSection'));
+const CodeWorkspace = lazy(() => import('./CodeWorkspace').then((module) => ({ default: module.CodeWorkspace })));
 import { TopicNavigation } from './TopicNavigation';
 import { CelebrationOverlay } from './CelebrationOverlay';
 import { SubmissionModal } from './SubmissionModal';
-import RecursionVisualizer from '../../../components/RecursionVisualizer';
+const RecursionVisualizer = lazy(() => import('../../../components/RecursionVisualizer'));
 
 // Unified DSA learning workspace.
-// One contiguous page: accordion sidebar (phases → topics → videos) + a stable
+// One contiguous page: sidebar (phases → topics) + a stable
 // main area (title/progress header → video strip → video/lesson → editor).
 //   ctx truthy  → deep-linked topic workspace (/topic/:id), fully interactive.
 //   ctx null    → read-only roadmap workspace (/roadmap) that deep-links into
 //                 /topic/:id when a topic is opened.
-export const DSAWorkspacePage = ({ ctx }) => {
+export const DSAWorkspacePage = ({ ctx, roadmapDomainId, roadmapCourse }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [roadmapTutor, setRoadmapTutor] = useState(readStoredDsaTutor);
+  const tutor = ctx?.dsaTutor || roadmapTutor;
+  const selectTutor = ctx?.selectDsaTutor || ((value) => setRoadmapTutor(writeStoredDsaTutor(value)));
 
   const [course, setCourse] = useState(null);
   const [courseTopics, setCourseTopics] = useState({});
@@ -37,25 +42,18 @@ export const DSAWorkspacePage = ({ ctx }) => {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const domainId = user?.selectedDomain?._id || user?.selectedDomain;
+  const domainId = ctx?.topic?.domainId?._id || roadmapDomainId || user?.selectedDomain?._id || user?.selectedDomain;
 
   useEffect(() => {
     if (!domainId) return;
     let cancelled = false;
-    api.get(`/domains/${domainId}`)
-      .then((res) => {
-        if (cancelled || !res.data?.data) return;
-        setCourse(res.data.data);
-        const phases = res.data.data.phases || [];
-        const phaseIds = phases.map((p) => p._id);
-        return Promise.all(phaseIds.map((pid) => api.get(`/topics/phase/${pid}`))).then((results) => {
-          if (cancelled) return;
-          const map = {};
-          phaseIds.forEach((pid, idx) => {
-            map[pid] = results[idx]?.data?.data || [];
-          });
-          setCourseTopics(map);
-        });
+    Promise.all([roadmapCourse || getDomain(domainId), getDomainTopics(domainId)])
+      .then(([domain, topics]) => {
+        if (cancelled) return;
+        const byPhase = {};
+        for (const topic of topics) (byPhase[topic.phaseId] ||= []).push(topic);
+        setCourse(domain);
+        setCourseTopics(byPhase);
       })
       .catch(() => {/* roadmap shell handles errors */}
       )
@@ -65,11 +63,11 @@ export const DSAWorkspacePage = ({ ctx }) => {
     return () => {
       cancelled = true;
     };
-  }, [domainId]);
+  }, [domainId, roadmapCourse]);
 
   const activeTopicId = ctx?.id || null;
   const activeTopic = ctx?.topic || null;
-  const topicVideos = ctx?.topicVideos || [];
+
   const activeVideo = ctx?.activeVideo || null;
   const activeVideoKey = ctx?.activeVideoKey || null;
 
@@ -78,41 +76,32 @@ export const DSAWorkspacePage = ({ ctx }) => {
     return list.map((t) => t.topicId?._id || t.topicId).filter(Boolean);
   }, [ctx, user]);
 
-  const doneVideos = topicVideos.filter((v) => {
-    try {
-      return localStorage.getItem(`dsa_video_done_${activeTopicId}_${v.key}`) === 'true';
-    } catch {
-      return false;
-    }
-  }).length;
+  const sections = useMemo(() => getDsaTrackSections(course?.phases || [], courseTopics, tutor),
+    [course, courseTopics, tutor]);
+  const sectionTopic = sections.flatMap((section) => section.topics).find((item) =>
+    item._id === activeTopicId && item.videos.some((video) => video.key === activeVideoKey));
+  const topicVideos = sectionTopic?.videos || ctx?.topicVideos || [];
+  const videoDone = ctx?.isDsaVideoDone || (user ? readDsaVideoDone : () => false);
+  const mappedVideos = topicVideos.filter((video) => video.videoId);
+  const doneVideos = mappedVideos.filter((video) => videoDone(activeTopicId, video)).length;
+  const { previous, next } = getDsaTopicNeighbors(sections, activeTopicId, activeVideo);
 
-  const handleSelectTopic = (topicId) => {
-    if (topicId === activeTopicId) {
-      setSidebarOpen(isMobile ? true : sidebarOpen);
-      return;
-    }
-    navigate(`/topic/${topicId}`);
+  const handleSelectTopic = (topic) => {
+    navigate(getDsaTopicPath(topic));
+    if (isMobile) setSidebarOpen(false);
   };
 
-  const handleSelectVideo = (topicId, videoKey) => {
-    if (ctx && topicId === ctx.id) {
-      ctx.setActiveVideoKey(videoKey);
-    } else {
-      navigate(`/topic/${topicId}?v=${videoKey}`);
-    }
-  };
-
-  const handleNextTopic = () => {
-    if (ctx?.nextTopic) navigate(`/topic/${ctx.nextTopic._id}`);
-    else if (ctx?.prevTopic) navigate(`/topic/${ctx.prevTopic._id}`);
-    else navigate('/roadmap');
-  };
-
+  const missingVideo = (
+    <p className="px-5 py-4 text-xs font-semibold text-[var(--text-muted)] border-b border-[var(--border)]">
+      No video is mapped for this lesson in {DSA_TUTOR_OPTIONS.find((option) => option.key === tutor)?.label}.
+    </p>
+  );
+  const sectionCtx = ctx && { ...ctx, nextTopic: next, nextTopicPath: next && getDsaTopicPath(next) };
   const isCheckpointVideo = activeVideo?.type === 'checkpoint';
   const cpContent = ctx?.activeCheckpointContent || null;
 
   return (
-    <div className="flex h-[calc(100svh-64px)] w-full overflow-hidden bg-[var(--bg-main)] relative">
+    <div className="flex h-full min-h-0 w-full overflow-hidden bg-[var(--bg-main)] relative">
       {/* Mobile backdrop */}
       {isMobile && sidebarOpen && (
         <div
@@ -122,16 +111,19 @@ export const DSAWorkspacePage = ({ ctx }) => {
       )}
 
       <WorkspaceSidebar
-        course={course}
-        courseTopics={courseTopics}
-        activeTopicId={activeTopicId}
+        sections={sections}
+        loading={courseLoading}
         activeVideoKey={activeVideoKey}
+        videoDone={videoDone}
+        activeTopicId={activeTopicId}
         completedTopicIds={completedTopicIds}
         onSelectTopic={handleSelectTopic}
-        onSelectVideo={handleSelectVideo}
+        onSelectLesson={(topic, video) => {
+          navigate(getDsaTopicPath(topic, video));
+          if (isMobile) setSidebarOpen(false);
+        }}
         isMobile={isMobile}
         open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
       />
 
       {/* MAIN AREA */}
@@ -148,6 +140,13 @@ export const DSAWorkspacePage = ({ ctx }) => {
           </button>
         )}
 
+        <label className="flex items-center justify-end gap-2 px-4 py-2 shrink-0 bg-[var(--bg-card)] border-b border-[var(--border)] text-xs font-bold text-[var(--text-main)]">
+          Learning track
+          <select value={tutor} onChange={(event) => selectTutor(event.target.value)}
+            className="rounded-lg px-2 py-1 border border-[var(--border)] bg-[var(--bg-sub)] text-[var(--text-main)]">
+            {DSA_TUTOR_OPTIONS.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
+          </select>
+        </label>
         {courseLoading && !ctx ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="animate-spin rounded-full h-10 w-10 border-4 border-[var(--primary)] border-t-transparent" />
@@ -185,7 +184,7 @@ export const DSAWorkspacePage = ({ ctx }) => {
         ) : (
           <>
             {/* ─── STABLE HEADER ─── */}
-            <div className="bg-[var(--bg-card)] border-b border-[var(--border)] px-4 lg:px-6 py-3 flex items-center justify-between gap-3 shrink-0">
+            <div className="bg-[var(--bg-card)] border-b border-[var(--border)] px-4 lg:px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
               {isMobile && (
                 <button
                   type="button"
@@ -207,9 +206,9 @@ export const DSAWorkspacePage = ({ ctx }) => {
               <div className="flex items-center gap-2 shrink-0">
                 <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-sub)] border border-[var(--border)]">
                   <span className="text-[9px] font-black text-[var(--text-light)] uppercase tracking-wider">
-                    {doneVideos}/{topicVideos.length} videos
+                    {doneVideos}/{mappedVideos.length} videos
                   </span>
-                  {doneVideos === topicVideos.length && topicVideos.length > 0 && (
+                  {doneVideos === mappedVideos.length && mappedVideos.length > 0 && (
                     <FiCheckCircle className="text-emerald-500" size={11} />
                   )}
                 </div>
@@ -220,49 +219,36 @@ export const DSAWorkspacePage = ({ ctx }) => {
                   </div>
                 )}
 
+                {previous && (
+                  <button type="button" onClick={() => handleSelectTopic(previous)}
+                    className="rounded-lg px-2 py-2 text-[10px] font-bold border border-[var(--border)]"
+                    aria-label="Previous topic" title={previous.title}>Previous</button>
+                )}
                 <button
                   type="button"
-                  onClick={handleNextTopic}
-                  title={ctx?.nextTopic ? `Continue to ${ctx.nextTopic.title}` : 'Back to roadmap'}
+                  onClick={() => next ? handleSelectTopic(next) : navigate(ctx.roadmapLink)}
+                  title={next ? next.title : 'Back to roadmap'}
                   className="flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-gradient-to-r from-[var(--primary)] to-amber-500 text-[var(--text-main)] shadow-md cursor-pointer hover:scale-[1.02]"
                 >
-                  Next Topic <FiChevronRight size={12} />
+                  {next ? 'Next Topic' : 'Roadmap'} <FiChevronRight size={12} />
                 </button>
               </div>
             </div>
 
-            {/* ─── VIDEO STRIP (switch videos without the sidebar) ─── */}
-            {topicVideos.length > 1 && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-[var(--bg-main)] border-b border-[var(--border)] overflow-x-auto no-scrollbar shrink-0">
-                {topicVideos.map((v) => {
-                  const active = v.key === activeVideoKey;
-                  const done = (() => {
-                    try {
-                      return localStorage.getItem(`dsa_video_done_${activeTopicId}_${v.key}`) === 'true';
-                    } catch {
-                      return false;
-                    }
-                  })();
-                  return (
-                    <button
-                      key={v.key}
-                      type="button"
-                      onClick={() => ctx.setActiveVideoKey(v.key)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer ${
-                        active
-                          ? 'bg-[var(--primary-light)] border-[var(--primary)]/30 text-[var(--primary)]'
-                          : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--primary)]/30'
-                      }`}
-                    >
-                      {done ? <FiCheckCircle size={10} className="text-emerald-500" /> : v.type === 'checkpoint' ? <span>🔖</span> : <FiPlay size={9} />}
-                      {v.title}
-                    </button>
-                  );
-                })}
-              </div>
+            {tutor === DSA_TUTORS.BABBAR && activeTopic.checkpoints?.length > 0 && (
+              <label className="flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b border-[var(--border)]">
+                Practice checkpoint
+                <select value={activeVideo?.checkpointId || ""}
+                  onChange={(event) => ctx.setActiveVideoKey(event.target.value
+                    ? "cp:" + event.target.value : topicVideos[0]?.key || "")}
+                  className="min-w-0 rounded-lg px-2 py-1 border border-[var(--border)] bg-[var(--bg-sub)]">
+                  <option value="">Choose a checkpoint</option>
+                  {activeTopic.checkpoints.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                </select>
+              </label>
             )}
-
             {/* ─── WORK REGION ─── */}
+            <Suspense fallback={<p className="p-4 text-sm" role="status">Loading lesson workspace?</p>}>
             <div className="flex-1 flex min-h-0 overflow-hidden relative">
               {isCheckpointVideo ? (
                 /* Checkpoint split workspace */
@@ -306,7 +292,7 @@ export const DSAWorkspacePage = ({ ctx }) => {
                       </div>
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
-                      <VideoPlayer ctx={ctx} variant="checkpoint" />
+                      {activeVideo?.embedUrl ? <VideoPlayer ctx={ctx} variant="checkpoint" /> : missingVideo}
                       {cpContent?.visualizationData && (
                         <div className="p-5 border-b border-[var(--border)] h-[600px]">
                           <RecursionVisualizer visualizationData={cpContent.visualizationData} />
@@ -337,8 +323,8 @@ export const DSAWorkspacePage = ({ ctx }) => {
                     className={`w-full h-full flex-col border-r border-[var(--border)] bg-[var(--bg-card)] overflow-hidden shrink-0 ${isMobile && ctx.activeWorkspaceTab !== 'learn' ? 'hidden' : 'flex'}`}
                   >
                     <div className="flex-1 overflow-y-auto custom-scrollbar bg-[var(--bg-main)]">
-                      <VideoPlayer ctx={ctx} variant="workspace" />
-                      <ProblemSection ctx={ctx} variant="lovebabbar" />
+                      {activeVideo?.embedUrl ? <VideoPlayer ctx={ctx} variant="workspace" /> : missingVideo}
+                      <ProblemSection ctx={sectionCtx} variant="lovebabbar" />
                     </div>
                   </div>
                   {!isMobile && (
@@ -356,6 +342,7 @@ export const DSAWorkspacePage = ({ ctx }) => {
                 </div>
               )}
             </div>
+            </Suspense>
           </>
         )}
 

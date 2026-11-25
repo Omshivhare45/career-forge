@@ -1,31 +1,30 @@
-import React from 'react';
-import { FiLoader } from 'react-icons/fi';
+import { useEffect, useState } from 'react';
+import logo from '../assets/logo-sidebar.png';
+import './loadingState.css';
 
-const GlobalLoader = () => {
+export default function GlobalLoader({ fullScreen = true, title = 'Getting your learning space ready' }) {
+  const [takingLonger, setTakingLonger] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setTakingLonger(true), 12000);
+    return () => window.clearTimeout(timer);
+  }, []);
   return (
-    <div className="fixed inset-0 z-[9999] bg-[var(--bg-main)] flex flex-col items-center justify-center transition-all duration-500 animate-fade-in">
-      <div className="relative flex flex-col items-center">
-        {/* Glow behind loader */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-[var(--primary)]/20 rounded-full blur-2xl animate-pulse"></div>
-        
-        {/* Spinner */}
-        <div className="relative mb-6">
-          <div className="w-16 h-16 rounded-full border-4 border-[var(--border)] relative overflow-hidden">
-            <div className="absolute inset-0 border-t-4 border-[var(--primary)] rounded-full animate-spin"></div>
-          </div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center shadow-[var(--shadow-bubbly)]">
-            <span className="text-white font-black text-xs">CF</span>
-          </div>
-        </div>
-
-        {/* Loading Text */}
-        <h2 className="text-xl font-black text-[var(--text-main)] tracking-tight mb-2">Waking up the Forge</h2>
-        <p className="text-[var(--text-muted)] text-sm font-semibold max-w-xs text-center animate-pulse">
-          Starting our secure servers... This may take up to 30 seconds if they are asleep.
+    <div className={'forge-loading ' + (fullScreen ? 'forge-loading--screen' : '')}>
+      <div className="forge-loading__mark" aria-hidden="true">
+        <span className="forge-loading__ring" />
+        <img src={logo} alt="" width="48" height="48" />
+        <span className="forge-loading__spark" />
+      </div>
+      <div role="status" aria-live="polite" aria-atomic="true">
+        <p className="forge-loading__brand">CareerForge</p>
+        <h2>{title}</h2>
+        <p className="forge-loading__message">
+          {takingLonger
+            ? 'This is taking longer than usual. Check your connection if it continues.'
+            : 'One moment while we load this page.'}
         </p>
       </div>
+      <p className="forge-loading__tip">A little practice, a little progress. Every day.</p>
     </div>
   );
-};
-
-export default GlobalLoader;
+}

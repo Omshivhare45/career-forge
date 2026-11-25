@@ -1,12 +1,16 @@
+import GlobalLoader from '../components/GlobalLoader';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useSignInPrompt } from '../hooks/useSignInPrompt';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { FiChevronLeft, FiPlay, FiCheck, FiFileText, FiArrowRight, FiBookOpen, FiVideo, FiAlertTriangle, FiArrowLeft } from 'react-icons/fi';
 import { FaGraduationCap } from 'react-icons/fa';
 
-const AcademicsChapterDetail = () => {
+const AcademicsChapterWorkspace = ({ user }) => {
+  const promptSignIn = useSignInPrompt();
   const { chapterId } = useParams();
   const navigate = useNavigate();
 
@@ -24,73 +28,14 @@ const AcademicsChapterDetail = () => {
 
   const fetchChapterData = async () => {
     try {
-      // 1. Fetch semesters and branches
-      const [semRes, branchRes] = await Promise.all([
-        api.get('/academics/semesters'),
-        api.get('/academics/branches')
-      ]);
-
-      const semesters = semRes.data.data;
-      const branches = branchRes.data.data;
-
-      // 2. Fetch videos in chapter
-      const videosRes = await api.get(`/academics/videos?chapterId=${chapterId}`);
-      const fetchedVideos = (videosRes.data.data || []).sort((a, b) => a.order - b.order);
+      const { data } = await api.get("/academics/videos", { params: { chapterId } });
+      const fetchedVideos = data.data || [];
+      setChapter(data.chapter);
+      setSubject(data.subject);
       setVideos(fetchedVideos);
-
-      // 3. Find parent chapter and subject
-      const chaptersList = await Promise.all(
-        semesters.flatMap(sem =>
-          branches.map(async (br) => {
-            const subRes = await api.get(`/academics/subjects?semesterId=${sem._id}&branchId=${br._id}`);
-            const subjectsList = subRes.data.data;
-            for (const s of subjectsList) {
-              const chRes = await api.get(`/academics/chapters?subjectId=${s._id}`);
-              const ch = chRes.data.data.find(c => c._id === chapterId);
-              if (ch) {
-                return { chapter: ch, subject: s };
-              }
-            }
-            return null;
-          })
-        )
-      );
-
-      const foundNode = chaptersList.find(node => node !== null);
-      if (foundNode) {
-        setChapter(foundNode.chapter);
-        setSubject(foundNode.subject);
-      }
-
-      // Set active video
-      if (fetchedVideos.length > 0) {
-        // Query progress to find if there's a lastOpenedVideoId or partial timestamps
-        const progressRes = await api.get(`/academics/progress?subjectId=${foundNode?.subject?._id}`);
-        const userProgress = progressRes?.data?.data || {};
-        
-        // Find last watch states for individual videos
-        const mappedVideos = fetchedVideos.map(v => {
-          const matchingProg = userProgress.watchedVideos?.find(wv => wv.videoId === v._id);
-          return {
-            ...v,
-            completed: matchingProg?.completed || false,
-            timestamp: matchingProg?.timestamp || 0,
-            watchPercentage: matchingProg?.watchPercentage || 0
-          };
-        });
-        setVideos(mappedVideos);
-
-        const lastOpenedVideoId = userProgress.lastOpenedVideoId;
-        const lastOpenedVid = mappedVideos.find(v => v._id === lastOpenedVideoId);
-        
-        const initialVideo = lastOpenedVid || mappedVideos[0];
-        setActiveVideo(initialVideo);
-        setElapsedTime(initialVideo.timestamp || 0);
-
-        if (initialVideo.timestamp > 0 && !initialVideo.completed) {
-          toast.success(`Resuming lecture from ${formatTime(initialVideo.timestamp)} ⚡`);
-        }
-      }
+      const initialVideo = fetchedVideos.find((video) => video._id === data.lastOpenedVideoId) || fetchedVideos[0];
+      setActiveVideo(initialVideo || null);
+      setElapsedTime(initialVideo?.timestamp || 0);
     } catch (err) {
       toast.error('Failed to load chapter videos');
     } finally {
@@ -100,7 +45,7 @@ const AcademicsChapterDetail = () => {
 
   // Automated Watch Session Progress Tracker
   useEffect(() => {
-    if (!activeVideo) return;
+    if (!user || !activeVideo) return;
 
     // Reset watch timer
     setElapsedTime(activeVideo.timestamp || 0);
@@ -128,7 +73,7 @@ const AcademicsChapterDetail = () => {
 
   // Periodic Backend Progress Sync (Every 10 seconds of active watching)
   useEffect(() => {
-    if (!activeVideo || activeVideo.completed) return;
+    if (!user || !activeVideo || activeVideo.completed) return;
     
     if (elapsedTime > 0 && elapsedTime % 10 === 0) {
       const duration = activeVideo.duration || 600;
@@ -144,7 +89,7 @@ const AcademicsChapterDetail = () => {
   };
 
   const saveProgress = async (timestamp, watchPercentage, timeSpentDelta, completed) => {
-    if (!subject || !chapter || !activeVideo || savingProgress) return;
+    if (!user || !subject || !chapter || !activeVideo || savingProgress) return;
     try {
       await api.post('/academics/progress', {
         subjectId: subject._id,
@@ -181,6 +126,7 @@ const AcademicsChapterDetail = () => {
   };
 
   const handleManualComplete = async () => {
+    if (!user) return promptSignIn("Sign in to save lecture progress.");
     if (activeVideo.completed) return;
     setSavingProgress(true);
     try {
@@ -214,13 +160,7 @@ const AcademicsChapterDetail = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-[80vh]">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-[var(--primary)] border-t-transparent"></div>
-      </div>
-    );
-  }
+  if (loading) return <GlobalLoader fullScreen={false} title="Loading your chapter" />;
 
   if (!chapter || !subject) {
     return (
@@ -458,4 +398,8 @@ const AcademicsChapterDetail = () => {
   );
 };
 
-export default AcademicsChapterDetail;
+export default function AcademicsChapterDetail() {
+  const { user } = useAuth();
+  const { chapterId } = useParams();
+  return <AcademicsChapterWorkspace key={(user?._id || "guest") + ":" + chapterId} user={user} />;
+}

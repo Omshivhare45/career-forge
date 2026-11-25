@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { roadmapPath, validatedReturnPath } from '../utils/guestNavigation';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -11,6 +12,7 @@ const Domains = () => {
   const [selecting, setSelecting] = useState(false);
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
 
   useEffect(() => {
     fetchDomains();
@@ -28,6 +30,10 @@ const Domains = () => {
   };
 
   const handleSelectDomain = async (domainId) => {
+    if (!user) {
+      navigate(roadmapPath(domainId));
+      return;
+    }
     const currentDomainId = user.selectedDomain?._id || user.selectedDomain;
     
     if (currentDomainId === domainId) {
@@ -40,7 +46,8 @@ const Domains = () => {
       await api.post('/progress/select-domain', { domainId });
       await refreshUser();
       toast.success('Domain selected! Let\'s personalize your journey.');
-      navigate('/setup-profile');
+      const next = validatedReturnPath(params.get('next'), user.role);
+      navigate(next ? '/setup-profile?' + new URLSearchParams({ next }) : '/setup-profile');
     } catch (err) {
       toast.error('Failed to select domain');
     } finally {

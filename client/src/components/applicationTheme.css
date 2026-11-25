@@ -1,0 +1,27 @@
+/* Landing-derived refinements, scoped to the internal application shell. */
+.careerforge-app { --bg-main: var(--land-bg-alt); font-family: 'Nunito', system-ui, sans-serif; }
+.careerforge-app .card {
+  border-radius: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  transform-style: flat;
+  will-change: auto;
+}
+.careerforge-app .card-hover:hover { transform: translateY(-3px); box-shadow: var(--shadow-soft); border-color: var(--brand-green); }
+.careerforge-app .btn-primary:hover { background: var(--brand-green-hover); box-shadow: var(--shadow-bubbly); }
+.careerforge-app :is(a, button, input, select, textarea, summary):focus-visible { outline: 3px solid var(--brand-green); outline-offset: 3px; }
+.careerforge-app .app-advisory { background: var(--brand-green-light); border: 1px solid var(--border); box-shadow: none; color: var(--brand-green); }
+.careerforge-app .app-advisory :is(h2, h4) { color: var(--land-text); }
+.careerforge-app .app-advisory div.text-white { color: var(--brand-green); }
+.careerforge-app .app-advisory p, .careerforge-app .app-advisory p span { color: var(--land-nav); }
+.careerforge-app .app-advisory > div:first-child { display: none; }
+.app-skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 100; padding: .75rem 1rem; border-radius: .75rem; background: var(--brand-green); color: white; transform: translateY(-200%); }
+.app-skip-link:focus { transform: translateY(0); }
+@media (max-width: 639px) {
+  .app-browse > .fade-in { padding: 1.5rem 1rem; }
+  .app-browse > .fade-in h1 { font-size: 1.875rem; line-height: 1.2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .careerforge-app .card, .careerforge-app .btn-primary, .careerforge-app .btn-secondary { transition: none; }
+  .careerforge-app .card-hover:hover, .careerforge-app .btn-primary:hover { transform: none; }
+}

@@ -23,7 +23,7 @@ const ProblemSection = ({ ctx, variant }) => {
     completedCheckpoints,
     activeCheckpoint,
     CHECKPOINT_LABELS,
-    checkpointVideoFinished,
+    setCheckpointVideoFinished,
     checkpointCodePassed,
     isLastCp,
     markCheckpointComplete,
@@ -161,6 +161,7 @@ const ProblemSection = ({ ctx, variant }) => {
         <button
           type="button"
           onClick={() => {
+            if (!ctx.requireTopicProgress()) return;
             if (window.confirm("Are you sure you want to skip this checkpoint challenge and mark it as completed?")) {
               markCheckpointComplete(activeCheckpoint);
               setCheckpointVideoFinished(false);
@@ -462,7 +463,7 @@ const ProblemSection = ({ ctx, variant }) => {
               </div>
             </div>
              <Link
-              to={`/topic/${nextTopic._id}`}
+              to={ctx.nextTopicPath || `/topic/${nextTopic._id}`}
               className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-[var(--text-main)] rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 group cursor-pointer hover:scale-105 duration-300 animate-pulse"
             >
               Unlock Next Topic <FiArrowRight className="group-hover:translate-x-1 transition-transform" />

@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 
 let mongoServer;
 
@@ -19,7 +18,7 @@ const connectDB = async () => {
 
     if ((process.env.USE_MEMORY_DB === 'true' && !isProduction) || (!uri && !isProduction)) {
       console.log('Starting in-memory MongoDB server...');
-      mongoServer = await MongoMemoryServer.create();
+      mongoServer = await require('mongodb-memory-server').MongoMemoryServer.create();
       uri = mongoServer.getUri();
       console.log('In-memory MongoDB started at', uri);
     }
@@ -27,11 +26,6 @@ const connectDB = async () => {
     const conn = await connectWithTimeout(uri);
     console.log(`MongoDB connected: ${conn.connection.host}`);
     
-    // Database Connection Audit
-    const maskedUri = uri ? uri.replace(/\/\/[^@]+@/, '//******@') : 'in-memory';
-    console.log(`📡 MongoDB Connection URI (masked): ${maskedUri}`);
-    console.log(`🗄️  Active Database Name: ${conn.connection.name}`);
-
     return { conn, isMemory: !!mongoServer };
   } catch (error) {
     console.error(`MongoDB connection error: ${error.message}`);
@@ -47,7 +41,7 @@ const connectDB = async () => {
     if (!mongoServer) {
       console.log('No MongoDB URI provided. Falling back to in-memory DB...');
       try {
-        mongoServer = await MongoMemoryServer.create();
+        mongoServer = await require('mongodb-memory-server').MongoMemoryServer.create();
         const memoryUri = mongoServer.getUri();
         const conn = await connectWithTimeout(memoryUri);
         console.log(`In-memory MongoDB connected at ${memoryUri}`);

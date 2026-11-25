@@ -1,78 +1,37 @@
 import { useState } from 'react';
-import { FiChevronDown, FiPlay, FiCheckCircle, FiCircle, FiFolder } from 'react-icons/fi';
-import { getDsaVideoList } from '../utils/dsaVideoCatalog';
-
-// Accordion sidebar for the unified DSA learning workspace.
-// Lists every phase → topic → video for the DSA domain fetched from /domains/:id
-// and /topics/phase/:phaseId, so the whole roadmap is one contiguous list.
-// Progress comes from the persisted completion state + per-video localStorage.
-const videoDone = (topicId, videoKey) => {
-  try {
-    return localStorage.getItem(`dsa_video_done_${topicId}_${videoKey}`) === 'true';
-  } catch {
-    return false;
-  }
-};
+import { FiChevronDown, FiCheckCircle, FiCircle, FiFolder } from 'react-icons/fi';
 
 export const WorkspaceSidebar = ({
-  course,
-  courseTopics,
-  activeTopicId,
+  sections,
+  loading,
   activeVideoKey,
+  videoDone,
+  activeTopicId,
   completedTopicIds = [],
   onSelectTopic,
-  onSelectVideo,
+  onSelectLesson,
   isMobile,
-  open,
-  onClose
+  open
 }) => {
-  const phases = course?.phases || [];
   const [expandedPhases, setExpandedPhases] = useState({});
-  const [expandedTopic, setExpandedTopic] = useState(activeTopicId);
-  const [prevActiveId, setPrevActiveId] = useState(activeTopicId);
-
-  // Adjust accordion state as the active topic changes (during render, per the
-  // "derive state from props" pattern) so no cascade-render effects are needed.
-  if (activeTopicId !== prevActiveId) {
-    setPrevActiveId(activeTopicId);
-    if (activeTopicId) {
-      const topicPhase = phases.find((p) => (courseTopics[p._id] || []).some((t) => t._id === activeTopicId));
-      if (topicPhase) {
-        setExpandedPhases((prev) => ({ ...prev, [topicPhase._id]: true }));
-      }
-      setExpandedTopic(activeTopicId);
-    }
-  }
+  const selectedPhase = sections.find((section) => section.topics.some((topic) =>
+    topic._id === activeTopicId && topic.videos.some((video) => video.key === activeVideoKey))) ||
+    sections.find((section) => section.topics.some((topic) => topic._id === activeTopicId));
+  const defaultPhase = selectedPhase?._id || sections[0]?._id;
+  const isPhaseOpen = (phaseId) => expandedPhases[phaseId] ?? (phaseId === defaultPhase);
 
   const togglePhase = (phaseId) => {
-    setExpandedPhases((prev) => ({ ...prev, [phaseId]: !prev[phaseId] }));
+    setExpandedPhases((prev) => ({ ...prev, [phaseId]: !(prev[phaseId] ?? (phaseId === defaultPhase)) }));
   };
-
-  const handleTopicClick = (topicId) => {
-    if (topicId === activeTopicId) {
-      setExpandedTopic(expandedTopic === topicId ? null : topicId);
-    } else {
-      onSelectTopic(topicId);
-      setExpandedTopic(topicId);
-    }
-  };
-
-  const handleVideoClick = (topicId, videoKey) => {
-    onSelectVideo(topicId, videoKey);
-    onClose?.();
-  };
-
-  const totalTopics = phases.reduce((acc, p) => acc + (courseTopics[p._id]?.length || 0), 0);
-  const doneTopics = completedTopicIds.filter((t) => {
-    return phases.some((p) => (courseTopics[p._id] || []).some((tp) => tp._id === t));
-  }).length;
-
+  const topicIds = new Set(sections.flatMap((section) => section.topics.map((topic) => topic._id)));
+  const totalTopics = topicIds.size;
+  const doneTopics = completedTopicIds.filter((id) => topicIds.has(id)).length;
   return (
     <aside
       className={`bg-[var(--bg-card)] flex flex-col h-full overflow-hidden shrink-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
         ${isMobile
-          ? `absolute top-0 left-0 bottom-0 z-50 shadow-2xl ${open ? 'w-80 translate-x-0' : 'w-80 -translate-x-full'}`
-          : `${open ? 'w-80 border-r border-[var(--border)]' : 'w-0 border-r-0'}`
+          ? `absolute top-0 left-0 bottom-0 z-50 shadow-2xl ${open ? 'w-72 max-w-[85vw] translate-x-0' : 'w-72 max-w-[85vw] -translate-x-full'}`
+          : `${open ? 'w-60 xl:w-80 border-r border-[var(--border)]' : 'w-0 border-r-0'}`
         }`}
     >
       {open && (
@@ -99,16 +58,17 @@ export const WorkspaceSidebar = ({
 
           {/* Scrollable accordion */}
           <div className="flex-1 overflow-y-auto custom-scrollbar">
-            {phases.length === 0 && (
+            {loading && (
               <div className="p-6 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-4 border-[var(--primary)] border-t-transparent mx-auto" />
               </div>
             )}
 
-            {phases.map((phase) => {
+            {!loading && sections.length === 0 && <p className="p-6 text-xs text-[var(--text-muted)]">No topics are available for this track.</p>}
+            {sections.map((phase) => {
               const phaseId = phase._id;
-              const topics = courseTopics[phaseId] || [];
-              const isOpen = !!expandedPhases[phaseId];
+              const topics = phase.topics;
+              const isOpen = isPhaseOpen(phaseId);
               const phaseDone = topics.filter((topic) => completedTopicIds.some((ct) => ct === topic._id)).length;
 
               return (
@@ -116,6 +76,7 @@ export const WorkspaceSidebar = ({
                   <button
                     type="button"
                     onClick={() => togglePhase(phaseId)}
+                    aria-expanded={isOpen}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[var(--bg-sub)] transition-colors cursor-pointer text-left"
                   >
                     <FiChevronDown className={`text-[var(--text-light)] transition-transform duration-300 ${isOpen ? 'rotate-0' : '-rotate-90'}`} size={14} />
@@ -140,18 +101,17 @@ export const WorkspaceSidebar = ({
                     <div className="pb-2">
                       {topics.map((topic) => {
                         const topicId = topic._id;
-                        const videos = getDsaVideoList(topic);
-                        const isActiveTopic = topicId === activeTopicId;
-                        const isExpanded = expandedTopic === topicId || isActiveTopic;
+                        const videos = topic.videos.filter((video) => video.videoId);
+                        const isActiveTopic = topicId === activeTopicId && (!activeVideoKey || topic.videos.some((video) => video.key === activeVideoKey));
                         const isDone = completedTopicIds.some((ct) => ct === topicId);
-                        const doneCount = videos.filter((v) => videoDone(topicId, v.key)).length;
+                        const doneCount = videos.filter((v) => videoDone(topicId, v)).length;
                         const allVideosDone = videos.length > 0 && doneCount === videos.length;
 
                         return (
-                          <div key={topicId} className={`ml-3 mr-2 border-l border-[var(--border)] ${isExpanded ? '' : ''}`}>
+                          <div key={topicId} className="ml-3 mr-2 border-l border-[var(--border)]">
                             <button
                               type="button"
-                              onClick={() => handleTopicClick(topicId)}
+                              onClick={() => onSelectTopic(topic)}
                               className={`w-full flex items-start gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer text-left ${
                                 isActiveTopic
                                   ? 'bg-[var(--primary-light)] border-[var(--primary)]/20 ml-2 mr-1'
@@ -177,36 +137,31 @@ export const WorkspaceSidebar = ({
                               </span>
                               <span className="text-[8px] font-black text-[var(--text-light)] shrink-0">{doneCount}/{videos.length}</span>
                             </button>
-
-                            {isExpanded && (
-                              <div className="ml-6 pl-1 pr-2 pb-1 space-y-0.5">
-                                {videos.map((v) => {
-                                  const isActive = isActiveTopic && v.key === activeVideoKey;
-                                  const done = videoDone(topicId, v.key);
+                            {isActiveTopic && (
+                              <ul aria-label={topic.title + ' subtopics'} className="ml-5 mt-1 space-y-1 border-l border-[var(--border)] pl-2 pb-2">
+                                {topic.videos.map((video) => {
+                                  const active = video.key === activeVideoKey;
+                                  const done = videoDone(topicId, video);
                                   return (
-                                    <button
-                                      key={`${topicId}-${v.key}`}
-                                      type="button"
-                                      onClick={() => handleVideoClick(topicId, v.key)}
-                                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md transition-all cursor-pointer text-left ${
-                                        isActive ? 'bg-[var(--bg-sub)] border border-[var(--primary)]/20' : 'hover:bg-[var(--bg-sub)] border border-transparent'
-                                      }`}
-                                    >
-                                      {done ? (
-                                        <FiCheckCircle size={10} className="text-emerald-500 shrink-0" />
-                                      ) : isActive ? (
-                                        <FiPlay size={10} className="text-[var(--primary)] shrink-0" />
-                                      ) : (
-                                        <FiCircle size={9} className="text-[var(--border-light)] shrink-0" />
-                                      )}
-                                      <span className={`text-[10px] font-semibold leading-snug truncate ${isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`}>
-                                        {v.title}
-                                      </span>
-                                    </button>
+                                    <li key={video.key}>
+                                      <button type="button" onClick={() => onSelectLesson(topic, video)}
+                                        aria-current={active ? 'step' : undefined}
+                                        className={'flex w-full items-start gap-2 rounded-lg border px-3 py-2.5 text-left text-xs font-bold transition-colors ' + (active
+                                          ? 'border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]'
+                                          : 'border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-sub)] hover:text-[var(--text-main)]')}>
+                                        <span aria-hidden="true" className="mt-0.5 shrink-0">{done ? <FiCheckCircle /> : <FiCircle size={12} />}</span>
+                                        <span className="min-w-0 break-words">
+                                          {video.title}
+                                          {!video.videoId && <span className="mt-0.5 block text-[10px] font-normal">Video unavailable</span>}
+                                          {done && <span className="sr-only"> ? Completed</span>}
+                                        </span>
+                                      </button>
+                                    </li>
                                   );
                                 })}
-                              </div>
+                              </ul>
                             )}
+
                           </div>
                         );
                       })}

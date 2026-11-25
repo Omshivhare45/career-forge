@@ -4,7 +4,7 @@ import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { FiLayout, FiSave, FiCheckCircle } from 'react-icons/fi';
 
-const WebDevPlayground = ({ topicId, boilerplate, editorTheme }) => {
+const WebDevPlayground = ({ topicId, boilerplate, editorTheme, canSave }) => {
   const [files, setFiles] = useState({
     'index.html': boilerplate?.html || '<!-- Write HTML here -->\n<h1>Hello World</h1>\n',
     'style.css': boilerplate?.css || '/* Write CSS here */\nh1 { color: #308D46; }\n',
@@ -23,7 +23,7 @@ const WebDevPlayground = ({ topicId, boilerplate, editorTheme }) => {
 
   // Fetch saved project on mount
   useEffect(() => {
-    if (!topicId) return;
+    if (!canSave || !topicId) return;
     
     const fetchProject = async () => {
       try {
@@ -43,11 +43,11 @@ const WebDevPlayground = ({ topicId, boilerplate, editorTheme }) => {
       }
     };
     fetchProject();
-  }, [topicId]);
+  }, [topicId, canSave]);
 
   // Debounced Auto-Save
   useEffect(() => {
-    if (!isLoaded || !topicId) return;
+    if (!canSave || !isLoaded || !topicId) return;
 
     if (saveTimer.current) {
       clearTimeout(saveTimer.current);
@@ -73,7 +73,7 @@ const WebDevPlayground = ({ topicId, boilerplate, editorTheme }) => {
     }, 2500);
 
     return () => clearTimeout(saveTimer.current);
-  }, [files, isLoaded, topicId]);
+  }, [files, isLoaded, topicId, canSave]);
 
   const handleEditorChange = (val) => {
     setFiles(prev => ({ ...prev, [activeFile]: val || '' }));

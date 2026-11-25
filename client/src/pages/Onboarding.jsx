@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { validatedReturnPath } from '../utils/guestNavigation';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
@@ -9,6 +10,7 @@ import { analyzeDsaProfile, normalizeDsaLanguage } from '../utils/dsaPersonaliza
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const { user, refreshUser } = useAuth();
   const [theme, setTheme] = useState(() => localStorage.getItem('careerforge_theme') || 'light');
   const [currentStep, setCurrentStep] = useState(0);
@@ -195,7 +197,8 @@ const Onboarding = () => {
         duration: 5000,
         icon: '✨'
       });
-      navigate(isDsa ? '/roadmap' : '/dashboard');
+      const next = validatedReturnPath(params.get('next'), user?.role);
+      navigate(next === '/setup-profile' ? '/dashboard' : next || (isDsa ? '/roadmap' : '/dashboard'));
     } catch (err) {
       toast.error('Failed to generate your personalized journey.');
     } finally {

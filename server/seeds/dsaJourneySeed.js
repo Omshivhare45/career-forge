@@ -1,11 +1,5 @@
-const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-const path = require('path');
+const { insertMissing, runSeedCli } = require('./seedSafety');
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '../.env') });
-
-const User = require('../models/User');
 const Domain = require('../models/Domain');
 const Phase = require('../models/Phase');
 const Topic = require('../models/Topic');
@@ -49,131 +43,103 @@ const dsaBadges = [
 ];
 
 async function seedDSA() {
-  try {
-    const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/careerforge';
-    await mongoose.connect(uri);
-    console.log('✅ Connected to MongoDB');
-
-    // Find or create DSA domain
-    let domain = await Domain.findOne({ slug: 'dsa' });
-    if (!domain) {
-      domain = await Domain.create(domainData);
-    } else {
-      await Domain.findByIdAndUpdate(domain._id, domainData);
-    }
-    console.log('📁 DSA Domain ready');
-
-    // Clear existing DSA phases, topics, badges, assessments
-    await Phase.deleteMany({ domainId: domain._id });
-    await Topic.deleteMany({ domainId: domain._id });
-    await Assessment.deleteMany({ domainId: domain._id });
-    await Badge.deleteMany({ domainId: domain._id });
-    console.log('🗑️  Cleared existing DSA data');
-
-    const topicData = require('./topicData');
-    const dsaLoveBabbar = require('./dsaLoveBabbar');
+  const domain = await insertMissing(Domain, { slug: domainData.slug }, { ...domainData, totalPhases: phases.length });
+  const topicData = { ...require('./topicData') };
+  const dsaLoveBabbar = require('./dsaLoveBabbar');
     
-    // Append Love Babbar topics instead of overwriting
-    for (const key in dsaLoveBabbar) {
-      if (topicData[key]) {
-        topicData[key] = [...topicData[key], ...dsaLoveBabbar[key]];
-      } else {
-        topicData[key] = dsaLoveBabbar[key];
-      }
+  // Append Love Babbar topics instead of overwriting
+  for (const key in dsaLoveBabbar) {
+    if (topicData[key]) {
+      topicData[key] = [...topicData[key], ...dsaLoveBabbar[key]];
+    } else {
+      topicData[key] = dsaLoveBabbar[key];
+    }
+  }
+
+  for (const phaseInfo of phases) {
+    const phase = await insertMissing(Phase, { domainId: domain._id, phaseNumber: phaseInfo.phaseNumber }, {
+      ...phaseInfo,
+      domainId: domain._id,
+      order: phaseInfo.phaseNumber
+    });
+
+    // Add topics for this phase and their individual badges
+    const topicKey = `dsa:${phase.phaseNumber}`;
+    const topics = topicData[topicKey] || [];
+    let orderIndex = 1;
+    for (const topicInfo of topics) {
+      const topic = await insertMissing(Topic, { domainId: domain._id, phaseId: phase._id, title: topicInfo.title }, { ...topicInfo, phaseId: phase._id, domainId: domain._id, order: orderIndex });
+
+      // One video = One badge
+      await insertMissing(Badge, { domainId: domain._id, phaseId: phase._id, topicId: topic._id, type: 'topic-completion' }, {
+        name: `${topic.title} Badge`,
+        description: `Mastered the "${topic.title}" topic!`,
+        icon: '📜',
+        domainId: domain._id,
+        phaseId: phase._id,
+        topicId: topic._id,
+        type: 'topic-completion',
+        unlockCondition: `Complete the ${topic.title} video and challenge`,
+        order: orderIndex
+      });
+      orderIndex++;
     }
 
-    for (const phaseInfo of phases) {
-      const phase = await Phase.create({
-        ...phaseInfo,
+    // Add assessment
+    await insertMissing(Assessment, { domainId: domain._id, phaseId: phase._id }, {
+      phaseId: phase._id,
+      domainId: domain._id,
+      title: `${phase.name} Mastery Test`,
+      description: `Final test to prove your mastery in ${phase.name}`,
+      type: 'custom',
+      platform: 'HackerRank',
+      assessmentLink: 'https://hackerrank.com',
+      passingScore: 70,
+      difficultyRating: phase.phaseNumber <= 3 ? 'beginner' : phase.phaseNumber <= 7 ? 'intermediate' : 'advanced',
+      maxAttempts: 3,
+      unlocksNextPhase: true,
+      order: phase.phaseNumber
+    });
+
+    // Check if this phase has a special badge
+    const specialBadge = dsaBadges.find(b => b.level === phase.phaseNumber);
+    if (specialBadge) {
+      await insertMissing(Badge, { domainId: domain._id, phaseId: phase._id, type: 'phase-completion' }, {
+        name: specialBadge.name,
+        description: `Achieved ${specialBadge.name} rank by mastering ${phase.name}`,
+        icon: specialBadge.icon,
         domainId: domain._id,
-        order: phaseInfo.phaseNumber
-      });
-
-      // Add topics for this phase and their individual badges
-      const topicKey = `dsa:${phase.phaseNumber}`;
-      const topics = topicData[topicKey] || [];
-      let orderIndex = 1;
-      for (const topicInfo of topics) {
-        const topic = await Topic.create({ ...topicInfo, phaseId: phase._id, domainId: domain._id, order: orderIndex });
-        
-        // One video = One badge
-        await Badge.create({
-          name: `${topic.title} Badge`,
-          description: `Mastered the "${topic.title}" topic!`,
-          icon: '📜',
-          domainId: domain._id,
-          phaseId: phase._id,
-          topicId: topic._id,
-          type: 'topic-completion',
-          unlockCondition: `Complete the ${topic.title} video and challenge`,
-          order: orderIndex
-        });
-        orderIndex++;
-      }
-
-      // Add assessment
-      await Assessment.create({
         phaseId: phase._id,
-        domainId: domain._id,
-        title: `${phase.name} Mastery Test`,
-        description: `Final test to prove your mastery in ${phase.name}`,
-        type: 'custom',
-        platform: 'HackerRank',
-        assessmentLink: 'https://hackerrank.com',
-        passingScore: 70,
-        difficultyRating: phase.phaseNumber <= 3 ? 'beginner' : phase.phaseNumber <= 7 ? 'intermediate' : 'advanced',
-        maxAttempts: 3,
-        unlocksNextPhase: true,
+        type: 'phase-completion',
+        unlockCondition: `Master all topics in ${phase.name}`,
         order: phase.phaseNumber
       });
-
-      // Check if this phase has a special badge
-      const specialBadge = dsaBadges.find(b => b.level === phase.phaseNumber);
-      if (specialBadge) {
-        await Badge.create({
-          name: specialBadge.name,
-          description: `Achieved ${specialBadge.name} rank by mastering ${phase.name}`,
-          icon: specialBadge.icon,
-          domainId: domain._id,
-          phaseId: phase._id,
-          type: 'phase-completion',
-          unlockCondition: `Master all topics in ${phase.name}`,
-          order: phase.phaseNumber
-        });
-      } else {
-        await Badge.create({
-          name: `${phase.name} Badge`,
-          description: `Completed ${phase.name} in DSA Journey`,
-          icon: '🏅',
-          domainId: domain._id,
-          phaseId: phase._id,
-          type: 'phase-completion',
-          unlockCondition: `Master all topics in ${phase.name}`,
-          order: phase.phaseNumber
-        });
-      }
+    } else {
+      await insertMissing(Badge, { domainId: domain._id, phaseId: phase._id, type: 'phase-completion' }, {
+        name: `${phase.name} Badge`,
+        description: `Completed ${phase.name} in DSA Journey`,
+        icon: '🏅',
+        domainId: domain._id,
+        phaseId: phase._id,
+        type: 'phase-completion',
+        unlockCondition: `Master all topics in ${phase.name}`,
+        order: phase.phaseNumber
+      });
     }
-
-    // Seed default streak badges
-    const streakBadges = [
-      { name: 'Bronze Badge', description: 'Maintained a 5-day study streak', icon: '🥉', type: 'streak', unlockCondition: 'Maintain 5-day study streak' },
-      { name: 'Monthly Badge', description: 'Maintained a 30-day study streak', icon: '📅', type: 'streak', unlockCondition: 'Maintain 30-day study streak' },
-      { name: 'First Step', description: 'Completed your first topic', icon: '👣', type: 'special', unlockCondition: 'Complete any topic' }
-    ];
-    for (const sb of streakBadges) {
-      const exists = await Badge.findOne({ name: sb.name });
-      if (!exists) {
-        await Badge.create(sb);
-      }
-    }
-
-    console.log('🎉 DSA Journey seeded successfully!');
-    process.exit(0);
-  } catch (error) {
-    console.error('❌ Seed error:', error.message);
-    process.exit(1);
   }
+
+  // Seed default streak badges
+  const streakBadges = [
+    { name: 'Bronze Badge', description: 'Maintained a 5-day study streak', icon: '🥉', type: 'streak', unlockCondition: 'Maintain 5-day study streak' },
+    { name: 'Monthly Badge', description: 'Maintained a 30-day study streak', icon: '📅', type: 'streak', unlockCondition: 'Maintain 30-day study streak' },
+    { name: 'First Step', description: 'Completed your first topic', icon: '👣', type: 'special', unlockCondition: 'Complete any topic' }
+  ];
+  for (const sb of streakBadges) {
+    await insertMissing(Badge, { name: sb.name }, sb);
+  }
+
 }
 
-seedDSA();
-
+if (require.main === module) {
+  runSeedCli(seedDSA);
+}

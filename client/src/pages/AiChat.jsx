@@ -1,3 +1,4 @@
+import GlobalLoader from '../components/GlobalLoader';
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -155,11 +156,7 @@ const AiChat = () => {
     { label: "Suggest a project", text: "Suggest a project for my level and domain" }
   ];
 
-  if (loading) return (
-    <div className="flex justify-center items-center h-[80vh]">
-      <div className="animate-spin rounded-full h-10 w-10 border-4 border-[var(--primary)] border-t-transparent"></div>
-    </div>
-  );
+  if (loading) return <GlobalLoader fullScreen={false} title="Opening Code Guru" />;
 
   return (
     <div className="max-w-4xl mx-auto h-[calc(100vh-100px)] flex flex-col px-4 py-4 transition-colors duration-300">

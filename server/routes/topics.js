@@ -3,7 +3,9 @@ const router = express.Router();
 const c = require('../controllers/topicController');
 const { protect, authorize } = require('../middleware/auth');
 
-router.get('/phase/:phaseId', protect, c.getTopicsByPhase);
+router.get('/domain/:domainId', c.getDomainTopicIndex);
+router.get('/phase/:phaseId', c.getTopicsByPhase);
+
 router.get('/all', protect, authorize('admin'), c.getAllTopics);
 router.get('/:id', protect, c.getTopic);
 router.post('/', protect, authorize('admin'), c.createTopic);

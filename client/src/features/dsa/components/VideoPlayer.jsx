@@ -16,12 +16,16 @@ export const VideoPlayer = ({ ctx, variant }) => {
     activeCheckpoint,
     CHECKPOINT_LABELS,
     checkpointVideoEmbedUrl,
-    checkpointVideoFinished, setCheckpointVideoFinished,
+    checkpointVideoFinished: legacyCheckpointDone, setCheckpointVideoFinished,
     langContent,
-    isVideoFinished, setIsVideoFinished,
+    isVideoFinished: legacyTutorialDone, setIsVideoFinished,
     activeVideoEmbedUrl,
     setLearningStep
   } = ctx;
+
+  const dsaDone = ctx.isDsaDomain && ctx.isDsaVideoDone(ctx.id, ctx.activeVideo);
+  const checkpointVideoFinished = ctx.isDsaDomain ? dsaDone : legacyCheckpointDone;
+  const isVideoFinished = ctx.isDsaDomain ? dsaDone : legacyTutorialDone;
 
   const DEFAULT_URL = "https://www.youtube.com/embed/EAR7De6Goz4?list=PLgUwDviBIf0oF6QL8m22w1hIDC1vJ_BHz";
 
@@ -53,13 +57,10 @@ export const VideoPlayer = ({ ctx, variant }) => {
           <button
             type="button"
             onClick={() => {
+              if (!ctx.requireTopicProgress()) return;
               const nextState = !checkpointVideoFinished;
-              setCheckpointVideoFinished(nextState);
-              if (ctx?.id && ctx?.activeVideoKey) {
-                try {
-                  localStorage.setItem(`dsa_video_done_${ctx.id}_${ctx.activeVideoKey}`, nextState ? 'true' : 'false');
-                } catch (e) {}
-              }
+              if (ctx.isDsaDomain) ctx.setDsaVideoFinished(nextState);
+              else setCheckpointVideoFinished(nextState);
               if (nextState) toast.success('Video marked done! 🚀');
             }}
             className={`text-[10px] border font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
@@ -102,6 +103,7 @@ export const VideoPlayer = ({ ctx, variant }) => {
           <button
             type="button"
             onClick={() => {
+              if (!ctx.requireTopicProgress()) return;
               const nextState = !isVideoFinished;
               setIsVideoFinished(nextState);
               if (nextState) toast.success('Video marked done! 🚀');
@@ -164,13 +166,9 @@ export const VideoPlayer = ({ ctx, variant }) => {
           <button
             type="button"
             onClick={() => {
+              if (!ctx.requireTopicProgress()) return;
               const nextState = !isVideoFinished;
-              setIsVideoFinished(nextState);
-              if (ctx?.id && ctx?.activeVideoKey) {
-                try {
-                  localStorage.setItem(`dsa_video_done_${ctx.id}_${ctx.activeVideoKey}`, nextState ? 'true' : 'false');
-                } catch (e) {}
-              }
+              ctx.setDsaVideoFinished(nextState);
               if (nextState) toast.success('Video marked done! 🚀');
             }}
             className={`text-[10px] border font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
@@ -216,7 +214,8 @@ export const VideoPlayer = ({ ctx, variant }) => {
             <button
               type="button"
               onClick={() => {
-                const nextState = !isVideoFinished;
+                if (!ctx.requireTopicProgress()) return;
+              const nextState = !isVideoFinished;
                 setIsVideoFinished(nextState);
                 if (nextState) toast.success('Video marked done! 🚀');
               }}

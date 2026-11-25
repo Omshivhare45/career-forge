@@ -1,0 +1,23 @@
+.forge-loading {
+  display: flex;
+  min-height: 20rem;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  background: var(--land-bg-alt);
+  color: var(--land-text);
+  text-align: center;
+}
+.forge-loading--screen { min-height: 100dvh; }
+.forge-loading__mark { position: relative; display: grid; place-items: center; width: 5.5rem; height: 5.5rem; margin-bottom: 1.5rem; }
+.forge-loading__mark img { border-radius: 1rem; }
+.forge-loading__ring { position: absolute; inset: 0; border: 3px solid var(--border); border-top-color: var(--brand-green); border-right-color: var(--brand-yellow); border-radius: 50%; animation: forge-loading-turn 1.4s linear infinite; }
+.forge-loading__spark { position: absolute; bottom: 0; right: 0; width: .85rem; height: .85rem; background: var(--brand-orange); border: 3px solid var(--land-bg-alt); border-radius: 50%; }
+.forge-loading__brand { color: var(--brand-green); font-size: .75rem; font-weight: 900; letter-spacing: .1em; margin-bottom: .5rem; }
+.forge-loading h2 { font-size: clamp(1.15rem, 3vw, 1.5rem); font-weight: 900; }
+.forge-loading__message { min-height: 3rem; max-width: 23rem; margin: .5rem auto 0; color: var(--land-nav); font-size: .875rem; line-height: 1.6; }
+.forge-loading__tip { max-width: 24rem; margin-top: 1.5rem; padding: .75rem 1rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--land-bg); color: var(--land-nav); font-size: .8rem; }
+@keyframes forge-loading-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .forge-loading__ring { animation: none; } }

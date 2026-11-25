@@ -1,3 +1,4 @@
+import GlobalLoader from '../components/GlobalLoader';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
@@ -41,13 +42,7 @@ const AcademicsSubjects = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-[80vh]">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-[var(--primary)] border-t-transparent"></div>
-      </div>
-    );
-  }
+  if (loading) return <GlobalLoader fullScreen={false} title="Loading subjects" />;
 
   return (
     <div className="fade-in max-w-7xl mx-auto py-12 px-6 lg:px-8">

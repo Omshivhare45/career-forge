@@ -4,6 +4,8 @@ import {
   FiAlertTriangle, FiSun, FiMoon, FiChevronDown
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
+import { useSignInPrompt } from '../hooks/useSignInPrompt';
 import CodeEditor from '../components/CodeEditor';
 import codeApi from '../api/codeApi';
 
@@ -62,12 +64,14 @@ const readStoredCode = () => {
   }
 };
 
-const Ide = () => {
+const IdeWorkspace = ({ canSave }) => {
+  const promptSignIn = useSignInPrompt();
   const rootRef = useRef(null);
 
-  const [languageKey, setLanguageKey] = useState(() => localStorage.getItem(LANGUAGE_KEY) || 'cpp');
-  const [codeByLang, setCodeByLang] = useState(readStoredCode);
+  const [languageKey, setLanguageKey] = useState(() => (canSave && localStorage.getItem(LANGUAGE_KEY)) || 'cpp');
+  const [codeByLang, setCodeByLang] = useState(() => canSave ? readStoredCode() : buildDefaultCodeMap());
   const [stdin, setStdin] = useState(() => {
+    if (!canSave) return DEFAULT_STDIN;
     const stored = localStorage.getItem(STDIN_KEY);
     return stored === null ? DEFAULT_STDIN : stored;
   });
@@ -87,16 +91,16 @@ const Ide = () => {
 
   // Persist workspace so code/stdin survive reloads and panel/language switches.
   useEffect(() => {
-    localStorage.setItem(LANGUAGE_KEY, languageKey);
-  }, [languageKey]);
+    if (canSave) localStorage.setItem(LANGUAGE_KEY, languageKey);
+  }, [languageKey, canSave]);
 
   useEffect(() => {
-    localStorage.setItem(CODE_KEY, JSON.stringify(codeByLang));
-  }, [codeByLang]);
+    if (canSave) localStorage.setItem(CODE_KEY, JSON.stringify(codeByLang));
+  }, [codeByLang, canSave]);
 
   useEffect(() => {
-    localStorage.setItem(STDIN_KEY, stdin);
-  }, [stdin]);
+    if (canSave) localStorage.setItem(STDIN_KEY, stdin);
+  }, [stdin, canSave]);
 
   // Drag-to-resize the bottom output panel.
   useEffect(() => {
@@ -138,6 +142,7 @@ const Ide = () => {
   };
 
   const handleRun = async () => {
+    if (!canSave) return promptSignIn("Sign in to run code.");
     if (running) return;
     if (!code.trim()) {
       toast.error('Write some code first.');
@@ -450,4 +455,7 @@ const Ide = () => {
   );
 };
 
-export default Ide;
+export default function Ide() {
+  const { user } = useAuth();
+  return <IdeWorkspace key={user?._id || "guest"} canSave={Boolean(user)} />;
+}

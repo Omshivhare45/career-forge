@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const { insertMissing, runSeedCli } = require('./seedSafety');
 const Domain = require('../models/Domain');
 const Phase = require('../models/Phase');
 const Topic = require('../models/Topic');
@@ -150,86 +150,62 @@ const phaseData = require('./phaseData');
 const topicData = require('./topicData');
 
 async function seedAllDomains() {
-  try {
-    for (const d of domainsToSeed) {
-      const domain = await Domain.findOneAndUpdate(
-        { slug: d.slug },
-        { ...d },
-        { upsert: true, new: true }
-      );
-      console.log(`✅ Domain set: ${domain.name}`);
+  for (const d of domainsToSeed) {
+    const domain = await insertMissing(Domain,
+      { slug: d.slug },
+      { ...d }
+    );
+    console.log(`✅ Domain set: ${domain.name}`);
 
-      const phases = phaseData[domain.slug] || [];
-      for (const phaseInfo of phases) {
-        const phase = await Phase.findOneAndUpdate(
-          { domainId: domain._id, phaseNumber: phaseInfo.phaseNumber },
-          {
-            ...phaseInfo,
-            domainId: domain._id,
-            order: phaseInfo.phaseNumber
-          },
-          { upsert: true, new: true }
-        );
+    const phases = phaseData[domain.slug] || [];
+    for (const phaseInfo of phases) {
+      const phase = await insertMissing(Phase,
+        { domainId: domain._id, phaseNumber: phaseInfo.phaseNumber },
+        {
+          ...phaseInfo,
+          domainId: domain._id,
+          order: phaseInfo.phaseNumber
+        }
+      );
         
-        const topicKey = `${domain.slug}:${phase.phaseNumber}`;
-        const topics = topicData[topicKey] || [];
+      const topicKey = `${domain.slug}:${phase.phaseNumber}`;
+      const topics = topicData[topicKey] || [];
         
-        if (topics.length > 0) {
-          for (const t of topics) {
-            await Topic.findOneAndUpdate(
-              { domainId: domain._id, phaseId: phase._id, title: t.title },
-              {
-                ...t,
-                phaseId: phase._id,
-                domainId: domain._id,
-                isActive: true
-              },
-              { upsert: true, new: true }
-            );
-          }
-        } else {
-          // Default topic if none specified
-          await Topic.findOneAndUpdate(
-            { domainId: domain._id, phaseId: phase._id, title: `Intro to ${phase.name}` },
+      if (topics.length > 0) {
+        for (const t of topics) {
+          await insertMissing(Topic,
+            { domainId: domain._id, phaseId: phase._id, title: t.title },
             {
-              title: `Intro to ${phase.name}`,
-              description: `Core concepts and foundations of ${phase.name}.`,
-              youtubeLink: 'https://www.youtube.com/watch?v=hcMzwfj824A',
-              estimatedTime: '1 hour',
+              ...t,
               phaseId: phase._id,
               domainId: domain._id,
-              isActive: true,
-              order: 0
-            },
-            { upsert: true, new: true }
+              isActive: true
+            }
           );
         }
+      } else {
+        // Default topic if none specified
+        await insertMissing(Topic,
+          { domainId: domain._id, phaseId: phase._id, title: `Intro to ${phase.name}` },
+          {
+            title: `Intro to ${phase.name}`,
+            description: `Core concepts and foundations of ${phase.name}.`,
+            youtubeLink: 'https://www.youtube.com/watch?v=hcMzwfj824A',
+            estimatedTime: '1 hour',
+            phaseId: phase._id,
+            domainId: domain._id,
+            isActive: true,
+            order: 0
+          }
+        );
       }
     }
-    console.log('🎉 All domains seeded!');
-  } catch (error) {
-    console.error('❌ Error seeding domains:', error);
   }
+  console.log('🎉 All domains seeded!');
 }
 
 module.exports = seedAllDomains;
 
-// If run directly
 if (require.main === module) {
-  const dotenv = require('dotenv');
-  dotenv.config({ path: '.env' });
-  
-  mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/careerforge')
-    .then(() => {
-      console.log('📡 Connected to MongoDB for seeding...');
-      return seedAllDomains();
-    })
-    .then(() => {
-      console.log('✅ Seeding complete');
-      process.exit(0);
-    })
-    .catch(err => {
-      console.error('❌ Seeding failed:', err);
-      process.exit(1);
-    });
+  runSeedCli(seedAllDomains);
 }

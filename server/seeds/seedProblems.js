@@ -1,3 +1,4 @@
+const { insertMissing } = require('./seedSafety');
 const Domain = require('../models/Domain');
 const Phase = require('../models/Phase');
 const Problem = require('../models/Problem');
@@ -26,16 +27,7 @@ async function seedProblemBank() {
       isPublished: true
     };
 
-    await Problem.findOneAndUpdate(
-      { slug: entry.slug },
-      payload,
-      {
-        upsert: true,
-        new: true,
-        runValidators: true,
-        setDefaultsOnInsert: true
-      }
-    );
+    await insertMissing(Problem, { slug: entry.slug }, payload);
   }
 }
 

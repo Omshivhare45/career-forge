@@ -1,10 +1,4 @@
-const dotenv = require('dotenv');
-dotenv.config({ path: '../.env' });
-// fallback
-if (!process.env.MONGODB_URI) dotenv.config({ path: '.env' });
-
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const { insertMissing, runSeedCli } = require('./seedSafety');
 
 const User = require('../models/User');
 const Domain = require('../models/Domain');
@@ -13,9 +7,6 @@ const Topic = require('../models/Topic');
 const Assessment = require('../models/Assessment');
 const Badge = require('../models/Badge');
 const CloudCredit = require('../models/CloudCredit');
-const Problem = require('../models/Problem');
-const Submission = require('../models/Submission');
-const UserProgress = require('../models/UserProgress');
 
 const domainData = require('./domainData');
 const phaseData = require('./phaseData');
@@ -34,239 +25,141 @@ const cloudCredits = [
   { title: 'Render Free Tier', description: 'Free web services and databases', link: 'https://render.com/', platform: 'Render', icon: '⚡', category: 'hosting', order: 10 },
   { title: 'Railway Free Plan', description: 'Deploy apps with free monthly credits', link: 'https://railway.app/', platform: 'Railway', icon: '🚂', category: 'hosting', order: 11 }
 ];
-async function seedDB(force = false) {
-  try {
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    if (mongoose.connection.readyState === 0) {
-      const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/careerforge';
-      await mongoose.connect(uri);
-      console.log('✅ Connected to MongoDB');
-    } else {
-      console.log('✅ Already connected to MongoDB');
-    }
-
-    // Safety check for production
-    if (isProduction && !force) {
-      const userCount = await User.countDocuments();
-      const domainCount = await Domain.countDocuments();
-      if (userCount > 0 || domainCount > 0) {
-        console.error('❌ [Safety Block] Seeding is aborted in production because the database is not empty.');
-        console.error(`📊 Users: ${userCount}, Domains: ${domainCount}`);
-        throw new Error('Database seeding blocked in production to prevent data loss/corruption.');
-      }
-    }
-
-    // Clear existing user data in non-production environments only if explicitly requested
-    const shouldClearUsers = process.argv.includes('--clear-users') || process.env.CLEAR_USERS === 'true';
-    if (shouldClearUsers && !isProduction) {
-      console.log('🗑️  Clearing user data (requested)...');
-      await Promise.all([
-        User.deleteMany({}),
-        Submission.deleteMany({}),
-        UserProgress.deleteMany({})
-      ]);
-    } else {
-      console.log('⚠️  Retaining all user data!');
-    }
-
-    // Seed cloud credits (upsert by title)
-    for (const credit of cloudCredits) {
-      await CloudCredit.findOneAndUpdate(
-        { title: credit.title },
-        credit,
-        { upsert: true, new: true }
-      );
-    }
-    console.log('☁️  Cloud credits seeded');
-
-    // Seed admin user (only if not already existing)
-    const adminEmail = (process.env.ADMIN_EMAIL || 'admin@careerforge.com').toLowerCase().trim();
-    const existingAdmin = await User.findOne({ email: adminEmail });
-    if (!existingAdmin) {
-      await User.create({
-        fullName: 'CareerForge Admin',
-        email: adminEmail,
-        password: process.env.ADMIN_PASSWORD || 'Admin@123',
-        role: 'admin'
-      });
-      console.log('👤 Admin user created');
-    } else {
-      console.log('👤 Admin user already exists');
-    }
-
-    // Seed domains and their phases/topics (upsert-based to preserve ObjectIds)
-    for (const domainInfo of domainData) {
-      const domain = await Domain.findOneAndUpdate(
-        { slug: domainInfo.slug },
-        domainInfo,
-        { upsert: true, new: true }
-      );
-      console.log(`📁 Domain: ${domain.name}`);
-
-      if (domain.slug === 'web-development') {
-        console.log('🗑️  Clearing old Web Development phases, topics, and badges for a clean seed...');
-        await Promise.all([
-          Phase.deleteMany({ domainId: domain._id }),
-          Topic.deleteMany({ domainId: domain._id }),
-          Badge.deleteMany({ domainId: domain._id })
-        ]);
-      }
-
-      const phases = phaseData[domain.slug] || [];
-      let phaseCount = 0;
-
-      for (const phaseInfo of phases) {
-        // Shift phaseNumber to start at 0 if the domain is not already 0-indexed (like WebDev and DSA)
-        const needsShift = (domain.slug !== 'dsa' && domain.slug !== 'web-development');
-        const adjustedPhaseNumber = needsShift ? (phaseInfo.phaseNumber - 1) : phaseInfo.phaseNumber;
-
-        const phase = await Phase.findOneAndUpdate(
-          { domainId: domain._id, phaseNumber: adjustedPhaseNumber },
-          {
-            ...phaseInfo,
-            phaseNumber: adjustedPhaseNumber,
-            domainId: domain._id,
-            order: adjustedPhaseNumber
-          },
-          { upsert: true, new: true }
-        );
-        phaseCount++;
-
-        // Add topics for this phase if available (lookup using the original phaseNumber key)
-        const topicKey = `${domain.slug}:${phaseInfo.phaseNumber}`;
-        const topics = topicData[topicKey] || [];
-        for (const topicInfo of topics) {
-          const topic = await Topic.findOneAndUpdate(
-            { domainId: domain._id, phaseId: phase._id, title: topicInfo.title },
-            { ...topicInfo, phaseId: phase._id, domainId: domain._id },
-            { upsert: true, new: true }
-          );
-          
-          // Create topic completion badge (One video = One badge)
-          await Badge.findOneAndUpdate(
-            { domainId: domain._id, phaseId: phase._id, topicId: topic._id, type: 'topic-completion' },
-            {
-              name: `${topic.title} Badge`,
-              description: `Completed "${topic.title}" in ${domain.name}`,
-              icon: '📜',
-              domainId: domain._id,
-              phaseId: phase._id,
-              topicId: topic._id,
-              type: 'topic-completion',
-              unlockCondition: `Complete the ${topic.title} topic`,
-              order: topic.order
-            },
-            { upsert: true, new: true }
-          );
-        }
-
-        // Add default assessment for each phase
-        await Assessment.findOneAndUpdate(
-          { domainId: domain._id, phaseId: phase._id },
-          {
-            phaseId: phase._id,
-            domainId: domain._id,
-            title: `${phase.name} Assessment`,
-            description: `Assessment for ${phase.name}`,
-            type: 'custom',
-            platform: 'HackerRank',
-            assessmentLink: 'ADMIN_WILL_ADD_HACKERRANK_ASSESSMENT_LINK',
-            passingScore: 60,
-            difficultyRating: phase.phaseNumber <= 3 ? 'beginner' : phase.phaseNumber <= 7 ? 'intermediate' : 'advanced',
-            maxAttempts: 3,
-            unlocksNextPhase: true,
-            order: phase.phaseNumber
-          },
-          { upsert: true, new: true }
-        );
-
-        // Add phase badge
-        await Badge.findOneAndUpdate(
-          { domainId: domain._id, phaseId: phase._id, type: 'phase-completion' },
-          {
-            name: `${phase.name} Badge`,
-            description: `Completed ${phase.name} in ${domain.name}`,
-            icon: '🏅',
-            domainId: domain._id,
-            phaseId: phase._id,
-            type: 'phase-completion',
-            unlockCondition: `Complete all topics in ${phase.name} and pass assessment`,
-            order: phase.phaseNumber
-          },
-          { upsert: true, new: true }
-        );
-      }
-
-      // Domain completion badge
-      await Badge.findOneAndUpdate(
-        { domainId: domain._id, type: 'domain-completion' },
-        {
-          name: `${domain.name} Master`,
-          description: `Completed the entire ${domain.name} roadmap`,
-          icon: '🏆',
-          domainId: domain._id,
-          type: 'domain-completion',
-          unlockCondition: `Complete all ${phaseCount} phases in ${domain.name}`,
-          order: 999
-        },
-        { upsert: true, new: true }
-      );
-
-      // Update domain stats
-      await Domain.findByIdAndUpdate(domain._id, { totalPhases: phaseCount });
-    }
-
-    // Streak badges
-    const streakBadges = [
-      { name: 'Bronze Badge', description: 'Studied 5 days in a row', icon: '🥉', type: 'streak', unlockCondition: 'Maintain 5-day study streak' },
-      { name: 'Monthly Badge', description: 'Studied 30 days in a row', icon: '📅', type: 'streak', unlockCondition: 'Maintain 30-day study streak' },
-      { name: 'First Step', description: 'Completed your first topic', icon: '👣', type: 'special', unlockCondition: 'Complete any topic' },
-      { name: 'Base Case Beginner', description: 'Solved your first recursion checkpoint', icon: '🧱', type: 'special', unlockCondition: 'Complete checkpoint 1 of Recursion' },
-      { name: 'Stack Explorer', description: 'Understood function call stacks', icon: '📚', type: 'special', unlockCondition: 'Complete checkpoint 10 of Recursion' },
-      { name: 'Backtracking Warrior', description: 'Mastered backtracking techniques', icon: '⚔️', type: 'special', unlockCondition: 'Complete checkpoint 15 of Recursion' },
-      { name: 'Recursion Survivor', description: 'Completed all recursion challenges', icon: '👑', type: 'special', unlockCondition: 'Complete all 22 checkpoints' }
-    ];
-    for (const badgeInfo of streakBadges) {
-      await Badge.findOneAndUpdate(
-        { name: badgeInfo.name },
-        badgeInfo,
-        { upsert: true, new: true }
-      );
-    }
-
-    // Seed problem bank (Admin problems)
-    try {
-      const seedProblemBank = require('./seedProblems');
-      await seedProblemBank();
-      console.log('📝 Problem bank seeded successfully');
-    } catch (err) {
-      console.error('❌ Failed to seed problem bank:', err.message);
-    }
-
-    // Seed B.Tech Academics
-    try {
-      const seedAcademics = require('./academicSeed');
-      await seedAcademics();
-      console.log('🎓 B.Tech Academics seeded successfully');
-    } catch (err) {
-      console.error('❌ Failed to seed B.Tech Academics:', err.message);
-    }
-
-    console.log('\n🎉 Database seeded successfully!');
-    console.log(`📧 Admin: ${process.env.ADMIN_EMAIL || 'admin@careerforge.com'}`);
-    console.log(`🔑 Password: ${process.env.ADMIN_PASSWORD || 'Admin@123'}`);
-  } catch (error) {
-    console.error('❌ Seed error:', error.message);
-    throw error;
+async function seedDB(admin) {
+  // Seed cloud credits (upsert by title)
+  for (const credit of cloudCredits) {
+    await insertMissing(CloudCredit,
+      { title: credit.title },
+      credit
+    );
   }
+  console.log('☁️  Cloud credits seeded');
+
+  if (admin && !(await User.exists({ email: admin.email }))) {
+    await User.create({ fullName: 'CareerForge Admin', ...admin, role: 'admin' });
+  }
+
+  // Seed domains and their phases/topics (upsert-based to preserve ObjectIds)
+  for (const domainInfo of domainData) {
+    const phases = phaseData[domainInfo.slug] || [];
+    const domain = await insertMissing(Domain,
+      { slug: domainInfo.slug },
+      { ...domainInfo, totalPhases: phases.length }
+    );
+    console.log(`📁 Domain: ${domain.name}`);
+
+    for (const phaseInfo of phases) {
+      // Shift phaseNumber to start at 0 if the domain is not already 0-indexed (like WebDev and DSA)
+      const needsShift = (domain.slug !== 'dsa' && domain.slug !== 'web-development');
+      const adjustedPhaseNumber = needsShift ? (phaseInfo.phaseNumber - 1) : phaseInfo.phaseNumber;
+
+      const phase = await insertMissing(Phase,
+        { domainId: domain._id, phaseNumber: adjustedPhaseNumber },
+        {
+          ...phaseInfo,
+          phaseNumber: adjustedPhaseNumber,
+          domainId: domain._id,
+          order: adjustedPhaseNumber
+        }
+      );
+
+      // Add topics for this phase if available (lookup using the original phaseNumber key)
+      const topicKey = `${domain.slug}:${phaseInfo.phaseNumber}`;
+      const topics = topicData[topicKey] || [];
+      for (const topicInfo of topics) {
+        const topic = await insertMissing(Topic,
+          { domainId: domain._id, phaseId: phase._id, title: topicInfo.title },
+          { ...topicInfo, phaseId: phase._id, domainId: domain._id }
+        );
+          
+        // Create topic completion badge (One video = One badge)
+        await insertMissing(Badge,
+          { domainId: domain._id, phaseId: phase._id, topicId: topic._id, type: 'topic-completion' },
+          {
+            name: `${topic.title} Badge`,
+            description: `Completed "${topic.title}" in ${domain.name}`,
+            icon: '📜',
+            domainId: domain._id,
+            phaseId: phase._id,
+            topicId: topic._id,
+            type: 'topic-completion',
+            unlockCondition: `Complete the ${topic.title} topic`,
+            order: topic.order
+          }
+        );
+      }
+
+      // Add default assessment for each phase
+      await insertMissing(Assessment,
+        { domainId: domain._id, phaseId: phase._id },
+        {
+          phaseId: phase._id,
+          domainId: domain._id,
+          title: `${phase.name} Assessment`,
+          description: `Assessment for ${phase.name}`,
+          type: 'custom',
+          platform: 'HackerRank',
+          assessmentLink: 'ADMIN_WILL_ADD_HACKERRANK_ASSESSMENT_LINK',
+          passingScore: 60,
+          difficultyRating: phase.phaseNumber <= 3 ? 'beginner' : phase.phaseNumber <= 7 ? 'intermediate' : 'advanced',
+          maxAttempts: 3,
+          unlocksNextPhase: true,
+          order: phase.phaseNumber
+        }
+      );
+
+      // Add phase badge
+      await insertMissing(Badge,
+        { domainId: domain._id, phaseId: phase._id, type: 'phase-completion' },
+        {
+          name: `${phase.name} Badge`,
+          description: `Completed ${phase.name} in ${domain.name}`,
+          icon: '🏅',
+          domainId: domain._id,
+          phaseId: phase._id,
+          type: 'phase-completion',
+          unlockCondition: `Complete all topics in ${phase.name} and pass assessment`,
+          order: phase.phaseNumber
+        }
+      );
+    }
+
+    // Domain completion badge
+    await insertMissing(Badge,
+      { domainId: domain._id, type: 'domain-completion' },
+      {
+        name: `${domain.name} Master`,
+        description: `Completed the entire ${domain.name} roadmap`,
+        icon: '🏆',
+        domainId: domain._id,
+        type: 'domain-completion',
+        unlockCondition: `Complete all ${phases.length} phases in ${domain.name}`,
+        order: 999
+      }
+    );
+  }
+
+  // Streak badges
+  const streakBadges = [
+    { name: 'Bronze Badge', description: 'Studied 5 days in a row', icon: '🥉', type: 'streak', unlockCondition: 'Maintain 5-day study streak' },
+    { name: 'Monthly Badge', description: 'Studied 30 days in a row', icon: '📅', type: 'streak', unlockCondition: 'Maintain 30-day study streak' },
+    { name: 'First Step', description: 'Completed your first topic', icon: '👣', type: 'special', unlockCondition: 'Complete any topic' },
+    { name: 'Base Case Beginner', description: 'Solved your first recursion checkpoint', icon: '🧱', type: 'special', unlockCondition: 'Complete checkpoint 1 of Recursion' },
+    { name: 'Stack Explorer', description: 'Understood function call stacks', icon: '📚', type: 'special', unlockCondition: 'Complete checkpoint 10 of Recursion' },
+    { name: 'Backtracking Warrior', description: 'Mastered backtracking techniques', icon: '⚔️', type: 'special', unlockCondition: 'Complete checkpoint 15 of Recursion' },
+    { name: 'Recursion Survivor', description: 'Completed all recursion challenges', icon: '👑', type: 'special', unlockCondition: 'Complete all 22 checkpoints' }
+  ];
+  for (const badgeInfo of streakBadges) {
+    await insertMissing(Badge,
+      { name: badgeInfo.name },
+      badgeInfo
+    );
+  }
+
+  await require('./seedProblems')();
+  await require('./academicSeed')();
 }
 
 if (require.main === module) {
-  const force = process.argv.includes('--force');
-  seedDB(force)
-    .then(() => process.exit(0))
-    .catch(() => process.exit(1));
+  runSeedCli(seedDB);
 }
-
-module.exports = seedDB;

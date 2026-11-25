@@ -1,3 +1,4 @@
+import GlobalLoader from '../components/GlobalLoader';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
@@ -51,11 +52,7 @@ const Profile = () => {
     }
   };
 
-  if (loading) return (
-    <div className="flex justify-center items-center h-[80vh]">
-      <div className="animate-spin rounded-full h-10 w-10 border-4 border-[var(--primary)] border-t-transparent"></div>
-    </div>
-  );
+  if (loading) return <GlobalLoader fullScreen={false} title="Loading your profile" />;
 
   if (!data || !data.user) return (
     <div className="flex flex-col items-center justify-center py-20 text-center px-6">

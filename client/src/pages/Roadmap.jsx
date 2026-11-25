@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import GlobalLoader from '../components/GlobalLoader';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/axios';
+import { getDomains, getDomain, getDomainTopics } from '../api/curriculum';
+import { useSignInPrompt } from '../hooks/useSignInPrompt';
 import { useAuth } from '../context/AuthContext';
 import { 
   FiLock, FiUnlock, FiCheckCircle, FiPlayCircle, FiZap, FiStar, 
@@ -8,26 +11,26 @@ import {
 } from 'react-icons/fi';
 
 const SHEET_QUESTIONS = [
-  { id: 'sheet_cp1', title: 'Two Sum', difficulty: 'Easy', topic: 'Arrays/Hashing', companies: ['Google', 'Amazon', 'Meta', 'Microsoft'], yt: 'https://www.youtube.com/watch?v=DRU_nIY4j4c' },
-  { id: 'sheet_cp2', title: 'Best Time to Buy and Sell Stock', difficulty: 'Easy', topic: 'Arrays/Hashing', companies: ['Amazon', 'Microsoft', 'Google', 'Apple'], yt: 'https://www.youtube.com/watch?v=excAOcl19kk' },
-  { id: 'sheet_cp3', title: 'Contains Duplicate', difficulty: 'Easy', topic: 'Arrays/Hashing', companies: ['Amazon', 'Adobe', 'Microsoft'], yt: 'https://www.youtube.com/watch?v=3OamzN90kQg' },
-  { id: 'sheet_cp4', title: 'Product of Array Except Self', difficulty: 'Medium', topic: 'Arrays/Hashing', companies: ['Amazon', 'Microsoft', 'Meta'], yt: 'https://www.youtube.com/watch?v=gReAturMcRs' },
-  { id: 'sheet_cp5', title: 'Maximum Subarray (Kadane)', difficulty: 'Medium', topic: 'Arrays/Hashing', companies: ['Amazon', 'Microsoft', 'Google'], yt: 'https://www.youtube.com/watch?v=H5PvPRwUPng' },
-  { id: 'sheet_cp6', title: 'Reverse a Linked List', difficulty: 'Easy', topic: 'Linked Lists', companies: ['Amazon', 'Microsoft', 'Adobe'], yt: 'https://www.youtube.com/watch?v=iRtLEoL-r-Y' },
-  { id: 'sheet_cp7', title: 'Detect Cycle in Linked List', difficulty: 'Easy', topic: 'Linked Lists', companies: ['Amazon', 'Microsoft'], yt: 'https://www.youtube.com/watch?v=aFitA8X1518' },
-  { id: 'sheet_cp8', title: 'Merge Two Sorted Lists', difficulty: 'Easy', topic: 'Linked Lists', companies: ['Amazon', 'Microsoft'], yt: 'https://www.youtube.com/watch?v=Xb4sraKQV2o' },
-  { id: 'sheet_cp9', title: 'Valid Parentheses', difficulty: 'Easy', topic: 'Stacks/Queues', companies: ['Amazon', 'Meta', 'Microsoft'], yt: 'https://www.youtube.com/watch?v=WKpHszpdfnM' },
-  { id: 'sheet_cp10', title: 'Next Greater Element', difficulty: 'Medium', topic: 'Stacks/Queues', companies: ['Amazon', 'Microsoft'], yt: 'https://www.youtube.com/watch?v=V09NfaGf2Ao' },
-  { id: 'sheet_cp11', title: 'Invert a Binary Tree', difficulty: 'Easy', topic: 'Trees', companies: ['Google', 'Amazon'], yt: 'https://www.youtube.com/watch?v=fKgZaGX-c4Y' },
-  { id: 'sheet_cp12', title: 'Maximum Depth of Binary Tree', difficulty: 'Easy', topic: 'Trees', companies: ['Amazon', 'Goldman Sachs'], yt: 'https://www.youtube.com/watch?v=eD3tmO66aSE' },
-  { id: 'sheet_cp13', title: 'Lowest Common Ancestor BST', difficulty: 'Easy', topic: 'Trees', companies: ['Amazon', 'Microsoft', 'Meta'], yt: 'https://www.youtube.com/watch?v=cX_kPV_yS2Y' },
-  { id: 'sheet_cp14', title: 'Tree Level Order', difficulty: 'Medium', topic: 'Trees', companies: ['Amazon', 'Microsoft', 'Bloomberg'], yt: 'https://www.youtube.com/watch?v=EoAsWbO7sqg' },
-  { id: 'sheet_cp15', title: 'Number of Islands', difficulty: 'Medium', topic: 'Graphs', companies: ['Amazon', 'Google', 'Microsoft', 'Meta'], yt: 'https://www.youtube.com/watch?v=muncqlKJ8ZY' },
-  { id: 'sheet_cp16', title: 'Path in Graph', difficulty: 'Easy', topic: 'Graphs', companies: ['Meta', 'Google'], yt: 'https://www.youtube.com/watch?v=f2EfG57Rq3Y' },
-  { id: 'sheet_cp17', title: 'Climbing Stairs', difficulty: 'Easy', topic: 'DP', companies: ['Amazon', 'Adobe', 'Google'], yt: 'https://www.youtube.com/watch?v=A617IOwlq7E' },
-  { id: 'sheet_cp18', title: 'Coin Change', difficulty: 'Medium', topic: 'DP', companies: ['Amazon', 'Microsoft', 'Goldman Sachs'], yt: 'https://www.youtube.com/watch?v=HGYgy8WYyfU' },
-  { id: 'sheet_cp19', title: 'Longest Common Subseq', difficulty: 'Medium', topic: 'DP', companies: ['Amazon', 'Microsoft', 'Honeywell'], yt: 'https://www.youtube.com/watch?v=NPvvyJh-C_w' },
-  { id: 'sheet_cp20', title: 'N Meetings in One Room', difficulty: 'Easy', topic: 'Greedy', companies: ['Amazon', 'Microsoft'], yt: 'https://www.youtube.com/watch?v=zPtI8q9ALU8' }
+  { id: 'sheet_cp1', title: 'Two Sum', difficulty: 'Easy', topic: 'Arrays/Hashing', companies: ['Google', 'Amazon', 'Meta', 'Microsoft'] },
+  { id: 'sheet_cp2', title: 'Best Time to Buy and Sell Stock', difficulty: 'Easy', topic: 'Arrays/Hashing', companies: ['Amazon', 'Microsoft', 'Google', 'Apple'] },
+  { id: 'sheet_cp3', title: 'Contains Duplicate', difficulty: 'Easy', topic: 'Arrays/Hashing', companies: ['Amazon', 'Adobe', 'Microsoft'] },
+  { id: 'sheet_cp4', title: 'Product of Array Except Self', difficulty: 'Medium', topic: 'Arrays/Hashing', companies: ['Amazon', 'Microsoft', 'Meta'] },
+  { id: 'sheet_cp5', title: 'Maximum Subarray (Kadane)', difficulty: 'Medium', topic: 'Arrays/Hashing', companies: ['Amazon', 'Microsoft', 'Google'] },
+  { id: 'sheet_cp6', title: 'Reverse a Linked List', difficulty: 'Easy', topic: 'Linked Lists', companies: ['Amazon', 'Microsoft', 'Adobe'] },
+  { id: 'sheet_cp7', title: 'Detect Cycle in Linked List', difficulty: 'Easy', topic: 'Linked Lists', companies: ['Amazon', 'Microsoft'] },
+  { id: 'sheet_cp8', title: 'Merge Two Sorted Lists', difficulty: 'Easy', topic: 'Linked Lists', companies: ['Amazon', 'Microsoft'] },
+  { id: 'sheet_cp9', title: 'Valid Parentheses', difficulty: 'Easy', topic: 'Stacks/Queues', companies: ['Amazon', 'Meta', 'Microsoft'] },
+  { id: 'sheet_cp10', title: 'Next Greater Element', difficulty: 'Medium', topic: 'Stacks/Queues', companies: ['Amazon', 'Microsoft'] },
+  { id: 'sheet_cp11', title: 'Invert a Binary Tree', difficulty: 'Easy', topic: 'Trees', companies: ['Google', 'Amazon'] },
+  { id: 'sheet_cp12', title: 'Maximum Depth of Binary Tree', difficulty: 'Easy', topic: 'Trees', companies: ['Amazon', 'Goldman Sachs'] },
+  { id: 'sheet_cp13', title: 'Lowest Common Ancestor BST', difficulty: 'Easy', topic: 'Trees', companies: ['Amazon', 'Microsoft', 'Meta'] },
+  { id: 'sheet_cp14', title: 'Tree Level Order', difficulty: 'Medium', topic: 'Trees', companies: ['Amazon', 'Microsoft', 'Bloomberg'] },
+  { id: 'sheet_cp15', title: 'Number of Islands', difficulty: 'Medium', topic: 'Graphs', companies: ['Amazon', 'Google', 'Microsoft', 'Meta'] },
+  { id: 'sheet_cp16', title: 'Path in Graph', difficulty: 'Easy', topic: 'Graphs', companies: ['Meta', 'Google'] },
+  { id: 'sheet_cp17', title: 'Climbing Stairs', difficulty: 'Easy', topic: 'DP', companies: ['Amazon', 'Adobe', 'Google'] },
+  { id: 'sheet_cp18', title: 'Coin Change', difficulty: 'Medium', topic: 'DP', companies: ['Amazon', 'Microsoft', 'Goldman Sachs'] },
+  { id: 'sheet_cp19', title: 'Longest Common Subseq', difficulty: 'Medium', topic: 'DP', companies: ['Amazon', 'Microsoft', 'Honeywell'] },
+  { id: 'sheet_cp20', title: 'N Meetings in One Room', difficulty: 'Easy', topic: 'Greedy', companies: ['Amazon', 'Microsoft'] }
 ];
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -55,14 +58,13 @@ const dsaLevelNames = DSA_LEVELS;
 const Roadmap = () => {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const promptSignIn = useSignInPrompt();
+  const [defaultDomainId, setDefaultDomainId] = useState(null);
   const [domainData, setDomainData] = useState(null);
+  const roadmapRequest = useRef(0);
   const [loading, setLoading] = useState(true);
   const [activeLevel, setActiveLevel] = useState(null);
-  const [dsaInstructor, setDsaInstructor] = useState('striver');
-
-  // Dynamic language selection state synced with local cache
-  const [selectedLang, setSelectedLang] = useState(() => normalizeDsaLanguage(localStorage.getItem('dsa_lang') || 'cpp'));
-  const [useStriverAdvanced, setUseStriverAdvanced] = useState(() => localStorage.getItem('striver_advanced') === 'true');
 
   // DSA Sheet state
   const [roadmapView, setRoadmapView] = useState('path'); // 'path' or 'sheet'
@@ -88,7 +90,7 @@ const Roadmap = () => {
     return 'dsa';
   };
 
-  const activeDomainSlug = user?.activeDomain?.slug || user?.selectedDomain?.slug || 'dsa';
+  const activeDomainSlug = domainData?.domain?.slug || user?.activeDomain?.slug || user?.selectedDomain?.slug || 'dsa';
   const activeDomainKey = getProgressKey(activeDomainSlug);
   const activeDomainProgress = user?.domainsProgress?.[activeDomainKey] || {
     xp: 0,
@@ -97,27 +99,19 @@ const Roadmap = () => {
     completedTopics: []
   };
 
-  const domainId = user?.selectedDomain?._id || user?.selectedDomain;
+  const activeDomainId = user?.activeDomain?._id || user?.activeDomain || user?.selectedDomain?._id || user?.selectedDomain;
+  const requestedDomain = params.get('domain');
+  const domainId = (/^[\w-]+$/.test(requestedDomain || '') && requestedDomain) || activeDomainId || defaultDomainId;
+  const canSave = Boolean(user && activeDomainId === domainId);
 
-  // Track initial state
   useEffect(() => {
-    const initRoadmap = async () => {
-      try {
-        const freshUser = await refreshUser();
-        if (!freshUser?.selectedDomain) {
-          navigate('/domains');
-          return;
-        }
-        if (freshUser?.profile?.onboardingAnswers?.dsa_language) {
-          setSelectedLang(normalizeDsaLanguage(localStorage.getItem('dsa_lang') || freshUser.profile.onboardingAnswers.dsa_language));
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    initRoadmap();
-  }, []);
-
+    if (domainId) return;
+    getDomains().then((domains) => {
+      const fallback = domains.find((domain) => domain.slug === 'dsa') || domains[0];
+      if (fallback) setDefaultDomainId(fallback._id);
+      else setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [domainId]);
   // Fetch roadmap data
   useEffect(() => {
     if (domainId) {
@@ -125,16 +119,10 @@ const Roadmap = () => {
     }
   }, [domainId]);
 
-  // Sync state modifications with local persistence
-  useEffect(() => {
-    localStorage.setItem('dsa_lang', selectedLang);
-  }, [selectedLang]);
+
 
   useEffect(() => {
-    localStorage.setItem('striver_advanced', useStriverAdvanced.toString());
-  }, [useStriverAdvanced]);
-
-  useEffect(() => {
+    if (!user) { setSheetCompletions([]); return; }
     if (dsaSheetTopicId) {
       try {
         const completed = JSON.parse(localStorage.getItem(`dsa_cp_done_${dsaSheetTopicId}`) || '[]');
@@ -143,9 +131,10 @@ const Roadmap = () => {
         setSheetCompletions([]);
       }
     }
-  }, [dsaSheetTopicId]);
+  }, [dsaSheetTopicId, user?._id]);
 
   const handleToggleCheckpoint = (cpId) => {
+    if (!user) return promptSignIn();
     if (!dsaSheetTopicId) return;
     const isDone = sheetCompletions.includes(cpId);
     let updated;
@@ -161,20 +150,21 @@ const Roadmap = () => {
 
   const handleSolveChallenge = (cpId) => {
     if (!dsaSheetTopicId) return;
-    localStorage.setItem(`dsa_checkpoint_${dsaSheetTopicId}`, cpId);
+    if (user) localStorage.setItem(`dsa_checkpoint_${dsaSheetTopicId}`, cpId);
     navigate(`/topic/${dsaSheetTopicId}?cp=${cpId}`);
   };
 
   useEffect(() => {
     try {
-      const completed = JSON.parse(localStorage.getItem('a2z_cp_done') || '[]');
+      const completed = user ? JSON.parse(localStorage.getItem('a2z_cp_done') || '[]') : [];
       setA2zCompletions(completed);
     } catch (e) {
       setA2zCompletions([]);
     }
-  }, []);
+  }, [user?._id]);
 
   const handleToggleA2zProblem = (problemId) => {
+    if (!user) return promptSignIn();
     const isDone = a2zCompletions.includes(problemId);
     let updated;
     if (isDone) {
@@ -188,54 +178,45 @@ const Roadmap = () => {
   };
 
   const fetchRoadmap = async (id) => {
+    const request = ++roadmapRequest.current;
     try {
       setLoading(true);
-      const res = await api.get(`/domains/${id}`);
-      setDomainData(res.data.data);
-      if (res.data.data) {
-        setActiveLevel(activeDomainProgress.currentPhase ?? 0);
-        
-        // Find DSA Cheat Sheet Topic ID
-        if (res.data.data.domain.slug === 'dsa') {
-          const phase10 = res.data.data.phases.find(p => p.phaseNumber === 11);
-          if (phase10) {
-            try {
-              const topicsRes = await api.get(`/topics/phase/${phase10._id}`);
-              const sheetTopic = topicsRes.data.data?.find(t => t.title.includes('DSA Cheat Sheet'));
-              if (sheetTopic) {
-                setDsaSheetTopicId(sheetTopic._id);
-              }
-            } catch (err) {
-              console.error("Failed to load sheet topic", err);
-            }
-          }
-        }
+      setDomainData(null);
+      setDsaSheetTopicId(null);
+      setRoadmapView("path");
+      const result = await getDomain(id);
+      if (request !== roadmapRequest.current) return;
+      setDomainData(result);
+      const progressKey = getProgressKey(result.domain.slug);
+      const currentPhase = canSave ? user?.domainsProgress?.[progressKey]?.currentPhase : null;
+      setActiveLevel(currentPhase ?? result.phases[0]?.phaseNumber ?? 0);
+      if (result.domain.slug === 'dsa') {
+        getDomainTopics(id).then((topics) => {
+          if (request !== roadmapRequest.current) return;
+          setDsaSheetTopicId(topics.find((topic) => topic.title.includes('DSA Cheat Sheet'))?._id ?? null);
+        }).catch(() => {});
       }
     } catch (err) {
-      toast.error('Failed to load roadmap');
+      if (request === roadmapRequest.current) toast.error('Failed to load roadmap');
     } finally {
-      setLoading(false);
+      if (request === roadmapRequest.current) setLoading(false);
     }
   };
 
   const isTopicCompleted = (topicId) => {
-    return activeDomainProgress.completedTopics?.some(t => t.topicId === topicId || t.topicId?._id === topicId);
+    return canSave && activeDomainProgress.completedTopics?.some(t => t.topicId === topicId || t.topicId?._id === topicId);
   };
 
-  if (loading) return (
-    <div className="flex justify-center items-center h-[80vh]">
-      <div className="animate-spin rounded-full h-10 w-10 border-4 border-[var(--primary)] border-t-transparent"></div>
-    </div>
-  );
+  if (loading) return <GlobalLoader fullScreen={false} title="Loading your roadmap" />;
   
-  if (!domainData) return null;
+  if (!domainData) return <p className="px-6 py-12 text-center">Roadmap unavailable. <Link className="underline" to="/domains">Browse domains</Link></p>;
 
   const { domain, phases } = domainData;
   const activePhase = phases.find(p => p.phaseNumber === activeLevel);
   const currentXP = activeDomainProgress.xp || 0;
-  const currentStreak = user.dailyStreak || 0;
+  const currentStreak = user?.dailyStreak || 0;
   const isDSA = domain.slug === 'dsa';
-  const dsaAnswers = user.profile?.onboardingAnswers || {};
+  const dsaAnswers = user?.profile?.onboardingAnswers || {};
   const dsaAnalysis = isDSA ? (dsaAnswers.dsaAnalysis || analyzeDsaProfile(dsaAnswers)) : null;
   const streakRank = getStreakRank(currentStreak);
   const activeBadge = getDsaBadgeForLevel(activeDomainProgress.currentPhase ?? 0);
@@ -243,6 +224,8 @@ const Roadmap = () => {
   const langNames = DSA_LANGUAGE_LABELS;
 
   const handleSkipLevel = async () => {
+    if (!user) return promptSignIn();
+    if (!canSave) return;
     const levelName = isDSA ? (dsaLevelNames[activeLevel] || activePhase?.name || 'Level') : (activePhase?.name || 'Level');
     if (window.confirm(`Are you sure you want to skip the entire "${levelName}" (Level ${activeLevel}) and mark all its topics as completed?`)) {
       try {
@@ -318,19 +301,15 @@ const Roadmap = () => {
   const hardA2zSolved = allA2zProblems.filter(p => p.difficulty === 'Hard' && a2zCompletions.includes(p.id)).length;
 
   const getFilteredStepProblems = (stepObj) => {
-    const matched = [];
-    stepObj.subcategories.forEach(sub => {
-      sub.problems.forEach(p => {
-        const searchLower = a2zSearch.toLowerCase();
-        const matchesSearch = p.name.toLowerCase().includes(searchLower) || sub.title.toLowerCase().includes(searchLower);
-        const matchesDifficulty = a2zDifficulty === 'All' || p.difficulty === a2zDifficulty;
-
-        if (matchesSearch && matchesDifficulty) {
-          matched.push(p);
-        }
-      });
-    });
-    return matched;
+    const searchLower = a2zSearch.trim().toLowerCase();
+    return stepObj.subcategories.flatMap((sub) =>
+      sub.problems
+        .filter((p) =>
+          (p.name.toLowerCase().includes(searchLower) || sub.title.toLowerCase().includes(searchLower)) &&
+          (a2zDifficulty === 'All' || p.difficulty === a2zDifficulty)
+        )
+        .map((p) => ({ ...p, subcategoryTitle: sub.title }))
+    );
   };
 
   return (
@@ -381,8 +360,8 @@ const Roadmap = () => {
       {roadmapView === 'path' ? (
         isDSA ? (
           /* DSA: the roadmap path IS the unified learning workspace */
-          <div className="h-[calc(100vh-185px)] min-h-[560px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg-card)]">
-            <DSAWorkspacePage ctx={null} />
+          <div className="h-[min(780px,calc(100svh-220px))] min-h-[420px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg-card)]">
+            <DSAWorkspacePage ctx={null} roadmapDomainId={domainId} roadmapCourse={domainData} />
           </div>
         ) : (
         <>
@@ -392,7 +371,7 @@ const Roadmap = () => {
               
               {phases.map((phase, index) => {
                 const phaseNum = phase.phaseNumber;
-                const isUnlocked = phaseNum <= (activeDomainProgress.currentPhase ?? 0);
+                const isUnlocked = !canSave || phaseNum <= (activeDomainProgress.currentPhase ?? 0);
                 const isCompleted = phaseNum < (activeDomainProgress.currentPhase ?? 0);
                 const isCurrent = phaseNum === (activeDomainProgress.currentPhase ?? 0);
                 
@@ -502,7 +481,7 @@ const Roadmap = () => {
                       </div>
                     </div>
 
-                    {activeLevel === (activeDomainProgress.currentPhase ?? 0) && (
+                    {canSave && activeLevel === (activeDomainProgress.currentPhase ?? 0) && (
                       <button
                         onClick={handleSkipLevel}
                         className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[var(--bg-card)] hover:bg-[var(--bg-sub)] border-2 border-[var(--border)] text-[var(--text-main)] font-black text-xs tracking-wider uppercase transition duration-300 shadow-sm w-full"
@@ -515,22 +494,6 @@ const Roadmap = () => {
 
                 {/* Right Side: Topics List */}
                 <div className="flex flex-col">
-                  {isDSA && (
-                    <div className="flex items-center gap-3 mb-6 p-1.5 bg-[var(--bg-sub)] rounded-xl border border-[var(--border)] w-max">
-                      <button 
-                        onClick={() => setDsaInstructor('striver')}
-                        className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${dsaInstructor === 'striver' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
-                      >
-                        Striver (A2Z)
-                      </button>
-                      <button 
-                        onClick={() => setDsaInstructor('babbar')}
-                        className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${dsaInstructor === 'babbar' ? 'bg-orange-500 text-white shadow-md' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
-                      >
-                        Love Babbar
-                      </button>
-                    </div>
-                  )}
                   <TopicsList 
                     phaseId={activePhase?._id} 
                     isTopicCompleted={isTopicCompleted}
@@ -745,17 +708,6 @@ const Roadmap = () => {
 
                       {/* Solve Challenge / Video Actions */}
                       <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
-                        {q.yt && (
-                          <a 
-                            href={q.yt} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500 text-white font-black text-xs uppercase tracking-wider hover:bg-rose-600 transition duration-200 shadow hover:shadow-md hover:scale-[1.01]"
-                            title="Watch Video Tutorial Explanation"
-                          >
-                            <FiPlayCircle size={16} /> Play Video
-                          </a>
-                        )}
                         <button
                           onClick={() => handleSolveChallenge(q.id)}
                           className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[var(--primary)] to-amber-500 hover:from-[var(--primary)] hover:to-amber-600 text-white font-black text-xs uppercase tracking-wider rounded-xl transition duration-200 shadow hover:shadow-md hover:scale-[1.01]"
@@ -839,7 +791,7 @@ const Roadmap = () => {
                 </span>
                 <input
                   type="text"
-                  placeholder="Search Striver A2Z problems or subtopics..."
+                  placeholder="Search Striver A2Z problems or concepts..."
                   value={a2zSearch}
                   onChange={(e) => setA2zSearch(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-[var(--bg-sub)] border border-[var(--border)] rounded-xl text-xs font-semibold text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition duration-200"
@@ -948,27 +900,12 @@ const Roadmap = () => {
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.2 }}
                       >
-                        <div className="p-5 border-t border-[var(--border)] bg-[var(--bg-sub)]/20 space-y-6">
-                          {step.subcategories.map((sub, subIdx) => {
-                            const subProblems = sub.problems.filter(p => {
-                              const searchLower = a2zSearch.toLowerCase();
-                              const matchesSearch = p.name.toLowerCase().includes(searchLower);
-                              const matchesDiff = a2zDifficulty === 'All' || p.difficulty === a2zDifficulty;
-                              return matchesSearch && matchesDiff;
-                            });
-
-                            if (subProblems.length === 0) return null;
-
-                            return (
-                              <div key={subIdx} className="space-y-3">
-                                <h4 className="text-[10px] font-black text-[var(--text-main)] uppercase tracking-wider border-l-2 border-orange-500 pl-2.5">
-                                  {sub.title}
-                                </h4>
-                                
-                                <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl overflow-hidden divide-y divide-[var(--border)]">
-                                  {subProblems.map((p) => {
-                                    const isDone = a2zCompletions.includes(p.id);
-                                    return (
+                        {/* Flat problem list: no nested subcategory panels. */}
+                        <div className="p-4 border-t border-[var(--border)] bg-[var(--bg-sub)]/20">
+                          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl overflow-hidden divide-y divide-[var(--border)]">
+                            {matchedProblems.map((p) => {
+                              const isDone = a2zCompletions.includes(p.id);
+                              return (
                                       <div 
                                         key={p.id} 
                                         className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-150 ${
@@ -995,6 +932,9 @@ const Roadmap = () => {
                                                 : 'text-[var(--text-main)]'
                                             }`}>
                                               {p.name}
+                                            </span>
+                                            <span className="block mt-1 text-[10px] text-[var(--text-muted)] font-medium">
+                                              {p.subcategoryTitle}
                                             </span>
                                           </div>
                                         </div>
@@ -1033,12 +973,9 @@ const Roadmap = () => {
                                           )}
                                         </div>
                                       </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
                       </motion.div>
                     )}

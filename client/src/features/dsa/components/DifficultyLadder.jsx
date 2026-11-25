@@ -13,8 +13,8 @@ const DifficultyLadder = ({ ctx }) => {
       </div>
       <div className="grid grid-cols-4 gap-2">
         {['beginner', 'easy', 'medium', 'challenge'].map((diff, idx) => {
-          const isUnlocked = idx === 0 || localStorage.getItem(`dsa_completed_${id}_${['beginner', 'easy', 'medium', 'challenge'][idx - 1]}`) === 'true';
-          const isCompleted = localStorage.getItem(`dsa_completed_${id}_${diff}`) === 'true';
+          const isUnlocked = idx === 0 || (ctx.canSaveTopic && localStorage.getItem(`dsa_completed_${id}_${['beginner', 'easy', 'medium', 'challenge'][idx - 1]}`) === 'true');
+          const isCompleted = ctx.canSaveTopic && localStorage.getItem(`dsa_completed_${id}_${diff}`) === 'true';
           const isActive = activeDifficulty === diff;
 
           return (

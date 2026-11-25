@@ -5,6 +5,10 @@ const AcademicChapter = require('../models/AcademicChapter');
 const AcademicVideo = require('../models/AcademicVideo');
 const AcademicProgress = require('../models/AcademicProgress');
 
+const isCurriculumId = (value) => typeof value === 'string' && /^[a-f\d]{24}$/i.test(value);
+const readProgress = (user, subjectId) => user ? AcademicProgress.findOne({ userId: user._id, subjectId }) : null;
+const visibleVideos = (req) => ({ isActive: true, ...(req.user ? {} : { isPublished: true }) });
+
 // ==========================================
 // STUDENT ENDPOINTS
 // ==========================================
@@ -36,29 +40,35 @@ exports.getBranches = async (req, res) => {
 exports.getSubjects = async (req, res) => {
   try {
     const { semesterId, branchId } = req.query;
-    if (!semesterId || !branchId) {
+    if (!isCurriculumId(semesterId) || !isCurriculumId(branchId)) {
       return res.status(400).json({ success: false, message: 'Please provide semesterId and branchId' });
     }
 
     const subjects = await AcademicSubject.find({ semesterId, branchId, isActive: true }).sort({ order: 1 });
     
-    // Fetch user progress for each subject
-    const subjectsWithProgress = await Promise.all(
-      subjects.map(async (subj) => {
-        const totalChapters = await AcademicChapter.countDocuments({ subjectId: subj._id, isActive: true });
-        
-        const progress = await AcademicProgress.findOne({ userId: req.user._id, subjectId: subj._id });
-        
-        return {
-          ...subj.toObject(),
-          totalChapters,
-          completedChaptersCount: progress ? progress.completedChapters.length : 0,
-          completedVideosCount: progress ? progress.completedVideos.length : 0,
-          lastOpenedChapterId: progress ? progress.lastOpenedChapterId : null,
-          lastOpenedVideoId: progress ? progress.lastOpenedVideoId : null
-        };
-      })
-    );
+    const subjectIds = subjects.map((subject) => subject._id);
+    const [chapterCounts, progressRows] = subjectIds.length ? await Promise.all([
+      AcademicChapter.aggregate([
+        { $match: { subjectId: { $in: subjectIds }, isActive: true } },
+        { $group: { _id: '$subjectId', total: { $sum: 1 } } },
+      ]),
+      req.user ? AcademicProgress.find({ userId: req.user._id, subjectId: { $in: subjectIds } })
+        .select('subjectId completedChapters completedVideos lastOpenedChapterId lastOpenedVideoId').lean() : [],
+    ]) : [[], []];
+    const counts = new Map(chapterCounts.map(({ _id, total }) => [String(_id), total]));
+    const progressBySubject = new Map(progressRows.map((item) => [String(item.subjectId), item]));
+    const subjectsWithProgress = subjects.map((subject) => {
+      const key = String(subject._id);
+      const progress = progressBySubject.get(key);
+      return {
+        ...subject.toObject(),
+        totalChapters: counts.get(key) || 0,
+        completedChaptersCount: progress?.completedChapters?.length || 0,
+        completedVideosCount: progress?.completedVideos?.length || 0,
+        lastOpenedChapterId: progress?.lastOpenedChapterId || null,
+        lastOpenedVideoId: progress?.lastOpenedVideoId || null,
+      };
+    });
 
     res.json({ success: true, data: subjectsWithProgress });
   } catch (error) {
@@ -71,43 +81,44 @@ exports.getSubjects = async (req, res) => {
 exports.getChapters = async (req, res) => {
   try {
     const { subjectId } = req.query;
-    if (!subjectId) {
+    if (!isCurriculumId(subjectId)) {
       return res.status(400).json({ success: false, message: 'Please provide subjectId' });
     }
 
-    const chapters = await AcademicChapter.find({ subjectId, isActive: true }).sort({ chapterNumber: 1 });
-    const progress = await AcademicProgress.findOne({ userId: req.user._id, subjectId });
+    const [subject, chapters, progress] = await Promise.all([
+      AcademicSubject.findById(subjectId),
+      AcademicChapter.find({ subjectId, isActive: true }).sort({ chapterNumber: 1 }),
+      readProgress(req.user, subjectId),
+    ]);
+    if (!subject || (!req.user && !subject.isActive)) {
+      return res.status(404).json({ success: false, message: 'Subject not found' });
+    }
     const completedChapters = progress ? progress.completedChapters.map(id => id.toString()) : [];
 
-    const chaptersWithStatus = await Promise.all(
-      chapters.map(async (ch, index) => {
-        const videosCount = await AcademicVideo.countDocuments({ chapterId: ch._id, isActive: true });
-        
-        // Chapter 1 (index 0) is always unlocked. Others unlock if previous chapter is completed
-        let isLocked = false;
-        if (index > 0) {
-          const prevChapterId = chapters[index - 1]._id.toString();
-          isLocked = !completedChapters.includes(prevChapterId);
-        }
+    const visible = req.user
+      ? { $eq: ['$isActive', true] }
+      : { $and: [{ $eq: ['$isActive', true] }, { $eq: ['$isPublished', true] }] };
+    const videoCounts = chapters.length ? await AcademicVideo.aggregate([
+      { $match: { chapterId: { $in: chapters.map((chapter) => chapter._id) } } },
+      { $group: {
+        _id: '$chapterId',
+        total: { $sum: { $cond: [visible, 1, 0] } },
+        completed: { $sum: { $cond: [{ $in: ['$_id', progress?.completedVideos || []] }, 1, 0] } },
+      } },
+    ]) : [];
+    const byChapter = new Map(videoCounts.map((item) => [String(item._id), item]));
+    const chaptersWithStatus = chapters.map((chapter, index) => {
+      const counts = byChapter.get(String(chapter._id));
+      return {
+        ...chapter.toObject(),
+        videosCount: counts?.total || 0,
+        completedVideosCount: counts?.completed || 0,
+        completedStatus: completedChapters.includes(String(chapter._id)),
+        isLocked: Boolean(req.user && index > 0 && !completedChapters.includes(String(chapters[index - 1]._id))),
+      };
+    });
 
-        const completedVideosCount = progress
-          ? await AcademicVideo.countDocuments({
-              chapterId: ch._id,
-              _id: { $in: progress.completedVideos }
-            })
-          : 0;
-
-        return {
-          ...ch.toObject(),
-          videosCount,
-          completedVideosCount,
-          completedStatus: completedChapters.includes(ch._id.toString()),
-          isLocked
-        };
-      })
-    );
-
-    res.json({ success: true, data: chaptersWithStatus });
+    res.json({ success: true, data: chaptersWithStatus, subject });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -118,17 +129,18 @@ exports.getChapters = async (req, res) => {
 exports.getVideos = async (req, res) => {
   try {
     const { chapterId } = req.query;
-    if (!chapterId) {
+    if (!isCurriculumId(chapterId)) {
       return res.status(400).json({ success: false, message: 'Please provide chapterId' });
     }
 
     const chapter = await AcademicChapter.findById(chapterId);
-    if (!chapter) {
+    const subject = chapter && await AcademicSubject.findById(chapter.subjectId);
+    if (!chapter || !subject || (!req.user && (!chapter.isActive || !subject.isActive))) {
       return res.status(404).json({ success: false, message: 'Chapter not found' });
     }
 
-    const videos = await AcademicVideo.find({ chapterId, isActive: true }).sort({ order: 1 });
-    const progress = await AcademicProgress.findOne({ userId: req.user._id, subjectId: chapter.subjectId });
+    const videos = await AcademicVideo.find({ chapterId, ...visibleVideos(req) }).sort({ order: 1 });
+    const progress = await readProgress(req.user, chapter.subjectId);
 
     const videosWithProgress = videos.map((vid) => {
       const history = progress?.watchHistory?.find(h => h.videoId.toString() === vid._id.toString());
@@ -141,7 +153,7 @@ exports.getVideos = async (req, res) => {
       };
     });
 
-    res.json({ success: true, data: videosWithProgress });
+    res.json({ success: true, data: videosWithProgress, chapter, subject, lastOpenedVideoId: progress?.lastOpenedVideoId || null });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

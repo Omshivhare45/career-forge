@@ -5,6 +5,7 @@ import logoImg from '../assets/logo.png';
 import { FiMenu, FiX, FiArrowRight, FiCheckCircle, FiTrendingUp, FiTarget } from 'react-icons/fi';
 import { BsLightningFill } from 'react-icons/bs';
 import GuestExplorePipeline from '../pipelines/guestExplore/GuestExplorePipeline';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 const Landing = () => {
   const { user, isAuthenticated } = useAuth();
@@ -51,8 +52,8 @@ const Landing = () => {
                 <Link to="/login" className="hidden sm:block text-[var(--land-nav)] hover:text-[var(--brand-green)] font-extrabold transition-colors px-4 py-2">
                   Sign In
                 </Link>
-                <Link to="/signup" className="hidden sm:inline-flex bg-[var(--brand-green)] hover:bg-[var(--brand-green-hover)] text-white font-extrabold px-6 py-2.5 rounded-lg transition-all shadow-[var(--shadow-bubbly)] hover:-translate-y-0.5 items-center gap-2">
-                  Sign Up For Free <FiArrowRight strokeWidth={3} />
+                <Link to="/dashboard" className="hidden sm:inline-flex bg-[var(--brand-green)] hover:bg-[var(--brand-green-hover)] text-white font-extrabold px-6 py-2.5 rounded-lg transition-all shadow-[var(--shadow-bubbly)] hover:-translate-y-0.5 items-center gap-2">
+                  Explore as Guest <FiArrowRight strokeWidth={3} />
                 </Link>
               </>
             )}
@@ -93,8 +94,8 @@ const Landing = () => {
                     <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="w-full text-center text-lg font-bold hover:text-[var(--brand-green)] py-2">
                       Sign In
                     </Link>
-                    <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)} className="bg-[var(--brand-green)] text-white text-center font-extrabold px-6 py-3 rounded-lg w-full shadow-md">
-                      Sign Up For Free
+                    <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="bg-[var(--brand-green)] text-white text-center font-extrabold px-6 py-3 rounded-lg w-full shadow-md">
+                      Explore as Guest
                     </Link>
                   </>
                 )}
@@ -139,9 +140,13 @@ const Landing = () => {
                     Continue Learning
                   </Link>
                 ) : (
-                  <Link to="/signup" className="bg-[var(--brand-orange)] hover:bg-[var(--brand-orange-hover)] text-white text-lg font-black px-8 py-4 rounded-xl transition-all shadow-[0_8px_20px_rgba(244,130,37,0.3)] hover:-translate-y-1 w-full sm:w-auto text-center">
-                    Start Learning Now
-                  </Link>
+                  <div id="get-started" className="flex w-full flex-col items-center gap-3 rounded-2xl border border-green-100 bg-white p-3 sm:p-5 shadow-sm sm:w-auto">
+                    <GoogleSignInButton next="/dashboard" />
+                    <Link to="/dashboard" className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-green)] px-5 py-3 font-extrabold text-white transition-colors hover:bg-[var(--brand-green-hover)]">
+                      Explore as Guest <FiArrowRight />
+                    </Link>
+                    <p className="max-w-64 text-xs font-semibold text-[var(--land-nav)]">Browse freely. Sign in to save your learning progress.</p>
+                  </div>
                 )}
                 <div className="flex items-center gap-3 text-[var(--land-nav)] font-bold text-sm bg-white px-6 py-4 rounded-xl shadow-sm border border-gray-100">
                   <div className="flex -space-x-3">
@@ -229,7 +234,7 @@ const Landing = () => {
                 { title: "System Design", desc: "Architect highly scalable and distributed systems.", icon: "🏗️", color: "border-yellow-200 hover:border-yellow-500" },
                 { title: "Cybersecurity", desc: "Ethical hacking, network security, and cryptography.", icon: "🛡️", color: "border-red-200 hover:border-red-500" }
               ].map((card, idx) => (
-                <Link to="/signup" key={idx} className={`bg-white rounded-3xl p-8 border-2 ${card.color} transition-all duration-300 hover:shadow-[var(--shadow-bubbly)] hover:-translate-y-2 group cursor-pointer block`}>
+                <Link to="/dashboard#domains" key={idx} className={`bg-white rounded-3xl p-8 border-2 ${card.color} transition-all duration-300 hover:shadow-[var(--shadow-bubbly)] hover:-translate-y-2 group cursor-pointer block`}>
                   <div className="text-4xl mb-6 bg-gray-50 w-16 h-16 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">{card.icon}</div>
                   <h3 className="text-2xl font-black text-[var(--land-text)] mb-3">{card.title}</h3>
                   <p className="text-[var(--land-nav)] font-bold mb-6 leading-relaxed">{card.desc}</p>

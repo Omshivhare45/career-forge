@@ -92,6 +92,7 @@ export const useYouTubePlayer = ({
   useEffect(() => {
     if (!enabled || !iframeId) return undefined;
 
+    const persistOnDestroy = callbacksRef.current.onBeforeDestroy;
     let cancelled = false;
     let pollTimer = null;
     let attempts = 0;
@@ -189,7 +190,7 @@ export const useYouTubePlayer = ({
 
       if (readyRef.current && player) {
         try {
-          callbacksRef.current.onBeforeDestroy?.(player);
+          persistOnDestroy?.(player);
         } catch {
           // Progress persistence is best-effort.
         }

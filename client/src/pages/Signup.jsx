@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { loginDestination } from '../utils/guestNavigation';
 import logoImg from '../assets/logo.png';
 import toast from 'react-hot-toast';
 import { BsLightningFill } from 'react-icons/bs';
@@ -10,6 +11,7 @@ const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { googleLogin } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
 
   useEffect(() => {
     // Force light mode on public pages to prevent dark mode class leakage
@@ -43,9 +45,7 @@ const Signup = () => {
                 try {
                   const data = await googleLogin(credentialResponse.credential);
                   toast.success('Welcome to CareerForge!');
-                  if (data.user.role === 'admin') navigate('/admin');
-                  else if (!data.user.activeDomain && !data.user.selectedDomain) navigate('/domains');
-                  else navigate('/dashboard');
+                  navigate(loginDestination(params.get('next'), data.user), { replace: true });
                 } catch (error) {
                   toast.error(error.response?.data?.message || 'Google signup failed');
                 } finally {

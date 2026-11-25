@@ -1,3 +1,4 @@
+import GlobalLoader from '../components/GlobalLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
@@ -51,13 +52,7 @@ const AcademicsHome = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-[80vh]">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-[var(--primary)] border-t-transparent"></div>
-      </div>
-    );
-  }
+  if (loading) return <GlobalLoader fullScreen={false} title="Loading academics" />;
 
   return (
     <div className="fade-in max-w-7xl mx-auto py-12 px-6 lg:px-8">
@@ -80,11 +75,13 @@ const AcademicsHome = () => {
             Select Your Semester
           </h2>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 min-[400px]:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
             {semesters.map((sem) => {
               const isSelected = selectedSemester?._id === sem._id;
               return (
-                <motion.div
+                <motion.button
+                  type="button"
+                  aria-pressed={isSelected}
                   key={sem._id}
                   whileHover={{ y: -4 }}
                   onClick={() => handleSemesterSelect(sem)}
@@ -96,7 +93,7 @@ const AcademicsHome = () => {
                 >
                   <div className="text-2xl mb-2">📚</div>
                   <div className="font-black text-lg">{sem.name}</div>
-                </motion.div>
+                </motion.button>
               );
             })}
           </div>
@@ -116,11 +113,11 @@ const AcademicsHome = () => {
                 Select Your Branch
               </h2>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 min-[400px]:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
                 {branches.map((branch) => {
                   const isSelected = selectedBranch?._id === branch._id;
                   return (
-                    <motion.div
+                    <motion.button type="button" aria-pressed={isSelected}
                       key={branch._id}
                       whileHover={{ y: -4 }}
                       onClick={() => handleBranchSelect(branch)}
@@ -137,7 +134,7 @@ const AcademicsHome = () => {
                       <div className="text-[10px] uppercase tracking-wider text-[var(--text-light)] mt-1 font-bold">
                         {branch.name}
                       </div>
-                    </motion.div>
+                    </motion.button>
                   );
                 })}
               </div>

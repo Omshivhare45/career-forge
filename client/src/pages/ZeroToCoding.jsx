@@ -561,14 +561,8 @@ const ZeroToCoding = () => {
     }
   }, [aiMessages, isAiTyping]);
 
-  // Prevent horizontal scroll on mobile layout bug
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = 'auto'; };
-  }, []);
-
   return (
-    <div className={`h-screen flex flex-col font-sans transition-colors duration-300 relative overflow-hidden select-none ${
+    <div className={`h-full min-h-0 flex flex-col font-sans transition-colors duration-300 relative overflow-hidden select-none ${
       theme === 'dark' ? 'bg-[#1a1a1a] text-[#f4f4f5] dark-mode' : 'bg-[#f0f0f0] text-[#0f172a] light-mode'
     }`}>
       

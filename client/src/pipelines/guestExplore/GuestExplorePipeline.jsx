@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowRight, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import api from '../../api/axios';
+import { readCurriculum } from '../../api/curriculum';
 
 const DOMAIN_ORDER = ['devops', 'dsa', 'web-development'];
 
@@ -16,8 +16,8 @@ const GuestExplorePipeline = ({ onClose }) => {
   useEffect(() => {
     let active = true;
 
-    api.get('/guest-explore/domains')
-      .then(({ data }) => {
+    readCurriculum('/guest-explore/domains')
+      .then(data => {
         if (active) setDomains(data.data || []);
       })
       .catch(() => {

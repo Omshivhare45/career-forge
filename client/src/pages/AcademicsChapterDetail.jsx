@@ -1,86 +1,42 @@
-import GlobalLoader from '../components/GlobalLoader';
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import ContentSkeleton from '../components/ContentSkeleton';
+import { paths } from '../api/curriculum';
+import { useCurriculum } from '../hooks/useCurriculum';
+import { useState, useEffect, useEffectEvent, useRef } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSignInPrompt } from '../hooks/useSignInPrompt';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
-import { FiChevronLeft, FiPlay, FiCheck, FiFileText, FiArrowRight, FiBookOpen, FiVideo, FiAlertTriangle, FiArrowLeft } from 'react-icons/fi';
-import { FaGraduationCap } from 'react-icons/fa';
+import { FiChevronLeft, FiCheck, FiFileText, FiArrowRight, FiBookOpen, FiArrowLeft } from 'react-icons/fi';
 
-const AcademicsChapterWorkspace = ({ user }) => {
+const AcademicsChapterWorkspace = ({ user, data }) => {
   const promptSignIn = useSignInPrompt();
-  const { chapterId } = useParams();
   const navigate = useNavigate();
-
-  const [chapter, setChapter] = useState(null);
-  const [subject, setSubject] = useState(null);
-  const [videos, setVideos] = useState([]);
-  const [activeVideo, setActiveVideo] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [params, setParams] = useSearchParams();
+  const { chapter, subject } = data;
+  const [videos, setVideos] = useState(data.data || []);
+  const activeVideo = videos.find(v => v._id === params.get('video'))
+    || videos.find(v => v._id === data.lastOpenedVideoId) || videos[0];
   const [savingProgress, setSavingProgress] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0);
-
-  useEffect(() => {
-    fetchChapterData();
-  }, [chapterId]);
-
-  const fetchChapterData = async () => {
-    try {
-      const { data } = await api.get("/academics/videos", { params: { chapterId } });
-      const fetchedVideos = data.data || [];
-      setChapter(data.chapter);
-      setSubject(data.subject);
-      setVideos(fetchedVideos);
-      const initialVideo = fetchedVideos.find((video) => video._id === data.lastOpenedVideoId) || fetchedVideos[0];
-      setActiveVideo(initialVideo || null);
-      setElapsedTime(initialVideo?.timestamp || 0);
-    } catch (err) {
-      toast.error('Failed to load chapter videos');
-    } finally {
-      setLoading(false);
-    }
+  const [elapsedTime, setElapsedTime] = useState(activeVideo?.timestamp || 0);
+  const clock = useRef(elapsedTime);
+  const saves = useRef(Promise.resolve());
+  const selection = useRef(null);
+  const setActiveVideo = video => {
+    setParams(previous => {
+      const next = new URLSearchParams(previous);
+      next.set('video', video._id);
+      return next;
+    });
   };
 
-  // Automated Watch Session Progress Tracker
+  const resumeTime = useEffectEvent(() => activeVideo?.timestamp || 0);
   useEffect(() => {
-    if (!user || !activeVideo) return;
-
-    // Reset watch timer
-    setElapsedTime(activeVideo.timestamp || 0);
-
-    const interval = setInterval(() => {
-      // Increment only if tab/window has focus and video is not completed
-      if (document.hasFocus() && !activeVideo.completed) {
-        setElapsedTime(prev => {
-          const next = prev + 1;
-          const duration = activeVideo.duration || 600;
-          if (next >= duration) {
-            handleVideoCompletion();
-            clearInterval(interval);
-            return duration;
-          }
-          return next;
-        });
-      }
-    }, 1000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [activeVideo]);
-
-  // Periodic Backend Progress Sync (Every 10 seconds of active watching)
-  useEffect(() => {
-    if (!user || !activeVideo || activeVideo.completed) return;
-    
-    if (elapsedTime > 0 && elapsedTime % 10 === 0) {
-      const duration = activeVideo.duration || 600;
-      const percent = Math.min(Math.round((elapsedTime / duration) * 100), 100);
-      saveProgress(elapsedTime, percent, 10, percent >= 100);
-    }
-  }, [elapsedTime]);
+    selection.current = activeVideo?._id;
+    clock.current = resumeTime();
+    setElapsedTime(clock.current);
+    return () => { selection.current = null; };
+  }, [activeVideo?._id]);
 
   const formatTime = (secs) => {
     const m = Math.floor(secs / 60);
@@ -88,63 +44,52 @@ const AcademicsChapterWorkspace = ({ user }) => {
     return `${m}m ${s < 10 ? '0' : ''}${s}s`;
   };
 
-  const saveProgress = async (timestamp, watchPercentage, timeSpentDelta, completed) => {
-    if (!user || !subject || !chapter || !activeVideo || savingProgress) return;
-    try {
-      await api.post('/academics/progress', {
-        subjectId: subject._id,
-        chapterId: chapter._id,
-        videoId: activeVideo._id,
-        timestamp,
-        watchPercentage,
-        timeSpentDelta,
-        completed
-      });
-      
-      // Update local state
-      setVideos(prev => prev.map(v => v._id === activeVideo._id ? { ...v, completed, timestamp, watchPercentage } : v));
-      setActiveVideo(prev => prev ? { ...prev, completed, timestamp, watchPercentage } : null);
-    } catch (e) {
-      console.warn("Failed to persist watch progress", e);
-    }
+  const reportSaveError = () => toast.error('Failed to save watch progress.');
+  const saveProgress = (timestamp, watchPercentage, timeSpentDelta, completed) => {
+    if (!user || !activeVideo) return Promise.resolve();
+    const videoId = activeVideo._id;
+    const write = saves.current.then(() => api.post('/academics/progress', {
+      subjectId: subject._id, chapterId: chapter._id, videoId, timestamp,
+      watchPercentage, timeSpentDelta, completed
+    })).then(() => {
+      setVideos(previous => previous.map(v => v._id === videoId
+        ? { ...v, completed: v.completed || completed, timestamp, watchPercentage } : v));
+    });
+    saves.current = write.catch(() => {});
+    return write;
   };
 
-  const handleVideoCompletion = async () => {
-    toast.success("Lecture completed! 🎓");
-    await saveProgress(activeVideo.duration || 600, 100, 10, true);
-    
-    // Auto next video
-    const currentIdx = videos.findIndex(v => v._id === activeVideo._id);
-    if (currentIdx !== -1 && currentIdx < videos.length - 1) {
-      const nextVid = videos[currentIdx + 1];
-      toast.success(`Autoplaying next lecture: ${nextVid.title} 🚀`);
-      setActiveVideo(nextVid);
-    } else {
-      toast.success("Congratulations! You completed the last lecture in this chapter! 🎉");
-      fetchChapterData();
-    }
-  };
-
-  const handleManualComplete = async () => {
+  const completeVideo = async () => {
     if (!user) return promptSignIn("Sign in to save lecture progress.");
-    if (activeVideo.completed) return;
+    if (savingProgress || activeVideo.completed) return;
     setSavingProgress(true);
     try {
       await saveProgress(activeVideo.duration || 600, 100, 10, true);
-      toast.success("Marked as complete!");
-      
-      const currentIdx = videos.findIndex(v => v._id === activeVideo._id);
-      if (currentIdx !== -1 && currentIdx < videos.length - 1) {
-        setActiveVideo(videos[currentIdx + 1]);
-      } else {
-        fetchChapterData();
-      }
-    } catch (e) {
-      toast.error("Failed to mark complete");
+      if (selection.current !== activeVideo._id) return;
+      const next = videos[videos.indexOf(activeVideo) + 1];
+      toast.success(next ? 'Lecture completed!' : 'You completed the last lecture in this chapter!');
+      if (next) setActiveVideo(next);
+    } catch {
+      reportSaveError();
     } finally {
       setSavingProgress(false);
     }
   };
+
+  const tick = useEffectEvent(() => {
+    if (!document.hasFocus()) return;
+    const duration = activeVideo.duration || 600;
+    const time = Math.min(duration, ++clock.current);
+    setElapsedTime(time);
+    if (time === duration) completeVideo();
+    else if (time % 10 === 0) saveProgress(time, Math.round(time / duration * 100), 10, false).catch(reportSaveError);
+  });
+  const watching = Boolean(user && activeVideo && !activeVideo.completed && !savingProgress);
+  useEffect(() => {
+    if (!watching) return;
+    const timer = setInterval(() => tick(), 1000);
+    return () => clearInterval(timer);
+  }, [watching, activeVideo?._id]);
 
   const handleNextVideo = () => {
     const currentIdx = videos.findIndex(v => v._id === activeVideo._id);
@@ -160,7 +105,6 @@ const AcademicsChapterWorkspace = ({ user }) => {
     }
   };
 
-  if (loading) return <GlobalLoader fullScreen={false} title="Loading your chapter" />;
 
   if (!chapter || !subject) {
     return (
@@ -255,9 +199,10 @@ const AcademicsChapterWorkspace = ({ user }) => {
                     value={elapsedTime}
                     onChange={(e) => {
                       const val = parseInt(e.target.value, 10);
+                      clock.current = val;
                       setElapsedTime(val);
                       const percent = Math.min(Math.round((val / (activeVideo.duration || 600)) * 100), 100);
-                      saveProgress(val, percent, 0, percent >= 100);
+                      saveProgress(val, percent, 0, percent >= 100).catch(reportSaveError);
                     }}
                     className="w-full h-1.5 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-green-500"
                   />
@@ -297,7 +242,7 @@ const AcademicsChapterWorkspace = ({ user }) => {
                   )}
 
                   <button
-                    onClick={handleManualComplete}
+                    onClick={completeVideo}
                     disabled={activeVideo.completed || savingProgress}
                     className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
                       activeVideo.completed
@@ -401,5 +346,8 @@ const AcademicsChapterWorkspace = ({ user }) => {
 export default function AcademicsChapterDetail() {
   const { user } = useAuth();
   const { chapterId } = useParams();
-  return <AcademicsChapterWorkspace key={(user?._id || "guest") + ":" + chapterId} user={user} />;
+  const { data, loading } = useCurriculum(paths.videos(chapterId));
+  if (loading) return <ContentSkeleton title="Loading your chapter" />;
+  if (!data?.chapter || !data.subject) return <p role="alert" className="p-6">Could not load this chapter.</p>;
+  return <AcademicsChapterWorkspace key={chapterId} user={user} data={data} />;
 }

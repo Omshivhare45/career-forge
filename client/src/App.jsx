@@ -5,7 +5,7 @@ import { Toaster } from 'react-hot-toast';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import InstallPrompt from './components/InstallPrompt';
-import GlobalLoader from './components/GlobalLoader';
+import ContentSkeleton from './components/ContentSkeleton';
 
 // Layout
 const Layout = lazy(() => import('./components/Layout'));
@@ -77,7 +77,7 @@ function App() {
 
         <InstallPrompt />
 
-        <Suspense fallback={<GlobalLoader />}>
+        <Suspense fallback={<ContentSkeleton />}>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />

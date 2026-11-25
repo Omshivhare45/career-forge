@@ -1,54 +1,27 @@
-import GlobalLoader from '../components/GlobalLoader';
-import React, { useState, useEffect } from 'react';
+import ContentSkeleton from '../components/ContentSkeleton';
+import { paths, prefetch } from '../api/curriculum';
+import { useCurriculum } from '../hooks/useCurriculum';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import api from '../api/axios';
-import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { FiChevronLeft, FiBook, FiCheckCircle, FiPlay } from 'react-icons/fi';
-import { FaGraduationCap } from 'react-icons/fa';
+import { FiChevronLeft, FiCheckCircle, FiPlay } from 'react-icons/fi';
 
 const AcademicsSubjects = () => {
   const { semesterId, branchId } = useParams();
   const navigate = useNavigate();
 
-  const [subjects, setSubjects] = useState([]);
-  const [semesterName, setSemesterName] = useState('');
-  const [branchCode, setBranchCode] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchSubjects();
-  }, [semesterId, branchId]);
-
-  const fetchSubjects = async () => {
-    try {
-      const [subjectsRes, semestersRes, branchesRes] = await Promise.all([
-        api.get(`/academics/subjects?semesterId=${semesterId}&branchId=${branchId}`),
-        api.get('/academics/semesters'),
-        api.get('/academics/branches')
-      ]);
-
-      setSubjects(subjectsRes.data.data || []);
-      
-      const sem = semestersRes.data.data.find(s => s._id === semesterId);
-      const br = branchesRes.data.data.find(b => b._id === branchId);
-
-      if (sem) setSemesterName(sem.name);
-      if (br) setBranchCode(br.code);
-    } catch (err) {
-      toast.error('Failed to load subjects');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) return <GlobalLoader fullScreen={false} title="Loading subjects" />;
+  const list = useCurriculum(paths.subjects(semesterId, branchId));
+  const semesters = useCurriculum(paths.semesters);
+  const branches = useCurriculum(paths.branches);
+  const semesterName = semesters.data?.data.find(s => s._id === semesterId)?.name;
+  const branchCode = branches.data?.data.find(b => b._id === branchId)?.code;
+  const subjects = list.data?.data || [];
+  if (list.error) return <p role="alert" className="p-6">Could not load subjects.</p>;
 
   return (
     <div className="fade-in max-w-7xl mx-auto py-12 px-6 lg:px-8">
       {/* Back button */}
       <button 
-        onClick={() => navigate('/academics')}
+        onClick={() => navigate('/academics?' + new URLSearchParams({ semester: semesterId, branch: branchId }))}
         className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-main)] font-black text-xs uppercase tracking-wider mb-8 transition-colors outline-none cursor-pointer"
       >
         <FiChevronLeft size={16} strokeWidth={3} /> Change Semester / Branch
@@ -65,7 +38,7 @@ const AcademicsSubjects = () => {
         </p>
       </div>
 
-      {subjects.length === 0 ? (
+      {list.loading ? <ContentSkeleton title="Loading subjects" /> : subjects.length === 0 ? (
         <div className="text-center py-16 bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] p-8">
           <div className="text-5xl mb-4">📭</div>
           <h3 className="text-lg font-black text-[var(--text-main)] mb-1">No Subjects Found</h3>
@@ -130,6 +103,8 @@ const AcademicsSubjects = () => {
                   {/* Actions */}
                   <Link
                     to={`/academics/subject/${subject._id}`}
+                    onPointerEnter={() => prefetch(paths.chapters(subject._id))}
+                    onFocus={() => prefetch(paths.chapters(subject._id))}
                     className="w-full btn-primary py-3.5 text-xs rounded-xl shadow-[var(--shadow-bubbly)] uppercase tracking-widest font-black flex justify-center items-center gap-2 hover:-translate-y-0.5 transition-all cursor-pointer"
                   >
                     <FiPlay /> Continue Learning

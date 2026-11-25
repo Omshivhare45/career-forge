@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { FiLock, FiX } from 'react-icons/fi';
 
-const SignInPrompt = ({ onClose, title = 'Keep learning with CareerForge', message }) => (
+const SignInPrompt = ({ onClose, signIn = '/login', title = 'Keep learning with CareerForge', message }) => (
   <div
     className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
     role="presentation"
@@ -29,10 +29,10 @@ const SignInPrompt = ({ onClose, title = 'Keep learning with CareerForge', messa
       <h2 id="guest-signin-title" className="mb-3 text-2xl font-black text-slate-900">{title}</h2>
       <p className="mb-7 text-sm font-semibold leading-relaxed text-slate-600">{message}</p>
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Link to="/login" className="flex-1 rounded-xl bg-[var(--brand-green)] px-5 py-3 font-extrabold text-white transition hover:bg-[var(--brand-green-hover)]">
+        <Link to={signIn} className="flex-1 rounded-xl bg-[var(--brand-green)] px-5 py-3 font-extrabold text-white transition hover:bg-[var(--brand-green-hover)]">
           Sign In
         </Link>
-        <Link to="/signup" className="flex-1 rounded-xl border border-slate-200 px-5 py-3 font-extrabold text-slate-700 transition hover:bg-slate-50">
+        <Link to={signIn.replace('/login', '/signup')} className="flex-1 rounded-xl border border-slate-200 px-5 py-3 font-extrabold text-slate-700 transition hover:bg-slate-50">
           Create Account
         </Link>
       </div>

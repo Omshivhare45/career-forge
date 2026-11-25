@@ -1,16 +1,19 @@
 import { executeProgram } from '../utils/programExecution';
 import { getTopicEditorLanguage } from '../utils/editorLanguage';
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../api/axios';
 import codeApi from '../../../api/codeApi';
 import { roadmapPath } from '../../../utils/guestNavigation';
 import { useSignInPrompt } from '../../../hooks/useSignInPrompt';
 import { useAuth } from '../../../context/AuthContext';
 import { getDsaLanguageContent, getCheckpointContent } from '../../../utils/dsaContent';
-import { getDsaVideoList, resolveDsaLesson } from '../utils/dsaVideoCatalog';
+import { useCurriculum } from '../../../hooks/useCurriculum';
+import { paths } from '../../../api/curriculum';
+import { createReadCache } from '../../../api/readCache';
+import { useEditorDraft } from './useEditorDraft';
 import { getWebDevLanguageContent, getWebDevCheckpointContent } from '../../../utils/webDevContent';
-import { getLessonAssessment, normalizeDsaLanguage, readStoredDsaTutor, writeStoredDsaTutor, getDsaVideoDoneKey, readDsaVideoDone, writeDsaVideoDone } from '../../../utils/dsaPersonalization';
+import { getLessonAssessment, normalizeDsaLanguage, getDsaVideoDoneKey, readDsaVideoDone, writeDsaVideoDone } from '../../../utils/dsaPersonalization';
 import {
   executeSandbox,
   getRank,
@@ -24,11 +27,11 @@ import toast from 'react-hot-toast';
 // Everything that was previously inline state/logic inside the three
 // TopicDetail rendering paths now lives here so the UI shell stays a
 // single consistent template driven by data.
-export const useDSATopic = () => {
-  const { id } = useParams();
+const startedTopics = createReadCache();
+const configuredMonaco = new WeakSet();
+export const useDSATopic = (topic, selection = {}) => {
+  const id = topic._id;
   const navigate = useNavigate();
-  const [lessonParams, setLessonParams] = useSearchParams();
-  const [dsaTutor, setDsaTutor] = useState(readStoredDsaTutor);
   const { user, refreshUser } = useAuth();
   const promptSignIn = useSignInPrompt();
 
@@ -53,7 +56,6 @@ export const useDSATopic = () => {
   };
 
   // Topic state variables
-  const [topic, setTopic] = useState(null);
   const userDomainId = user?.activeDomain?._id || user?.activeDomain || user?.selectedDomain?._id || user?.selectedDomain;
   const topicDomainId = topic?.domainId?._id || topic?.domainId;
   const canSaveTopic = Boolean(user && topicDomainId && userDomainId === topicDomainId);
@@ -64,38 +66,18 @@ export const useDSATopic = () => {
   };
   const isDsaDomain = topic?.domainId?.slug === 'dsa' || topic?.domainId === 'dsa' ||
                       (typeof topic?.domainId === 'object' && topic?.domainId?.slug === 'dsa');
-  const topicVideos = useMemo(() =>
-    isDsaDomain ? getDsaVideoList(topic, dsaTutor) : [], [isDsaDomain, topic, dsaTutor]);
-  const activeVideo = isDsaDomain ? resolveDsaLesson(topic, topicVideos, lessonParams, dsaTutor) : null;
-  const selectDsaTutor = (tutor) => {
-    if (tutor === dsaTutor) return;
-    setDsaTutor(writeStoredDsaTutor(tutor));
-    const lessons = getDsaVideoList(topic, tutor);
-    const selected = resolveDsaLesson(topic, lessons, lessonParams, tutor);
-    if (selected?.videoId || !lessons.some((item) => item.videoId)) return;
-    setLessonParams((params) => {
-      const next = new URLSearchParams(params);
-      next.delete('cp');
-      next.delete('v');
-      return next;
-    }, { replace: true });
-  };
-  const activeVideoKey = activeVideo?.key || null;
+  const { dsaTutor, topicVideos = [], activeVideo, activeVideoKey, selectDsaTutor, setActiveVideoKey } = selection;
   const videoCheckpointId = activeVideo?.checkpointId;
-  const setActiveVideoKey = (key) => setLessonParams((params) => {
-    const next = new URLSearchParams(params);
-    next.delete('cp');
-    next.set('v', key);
-    return next;
-  });
 
   // Learning flow step state: 1=Video, 2=Assessment/Challenge, 'transition'=overlay
   const [learningStep, setLearningStep] = useState(1);
   const [isVideoFinished, setIsVideoFinished] = useState(false);
-  const [allTopics, setAllTopics] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const phaseId = topic.phaseId?._id || topic.phaseId;
+  const phase = useCurriculum(!isDsaDomain && phaseId ? paths.phase(phaseId) : null);
+  const allTopics = phase.data?.data || [];
   const [studyTime, setStudyTime] = useState(30);
-  const [notes, setNotes] = useState('');
+  const completed = canSaveTopic && activeDomainProgress.completedTopics?.find(t => (t.topicId?._id || t.topicId) === id);
+  const [notes, setNotes] = useState(completed?.notes || '');
   const [submitting, setSubmitting] = useState(false);
 
   const [isCpSidebarOpen, setIsCpSidebarOpen] = useState(false);
@@ -157,7 +139,7 @@ export const useDSATopic = () => {
   }, [id, learningStep, canSaveTopic]);
 
   // Custom Dynamic Languages & Tracks State
-  const [workspaceLanguage, setSelectedLang] = useState(() => normalizeDsaLanguage(localStorage.getItem('dsa_lang') || 'cpp'));
+  const [workspaceLanguage, setSelectedLang] = useState(() => getTopicEditorLanguage(topic, localStorage.getItem('dsa_lang') || user?.profile?.onboardingAnswers?.dsa_language) || 'cpp');
   const selectedLang = isDsaDomain ? normalizeDsaLanguage(workspaceLanguage) : workspaceLanguage;
   const [useStriverAdvanced, setUseStriverAdvanced] = useState(() => localStorage.getItem('striver_advanced') === 'true');
   const dsaCourse = useStriverAdvanced ? 'striver' : 'default';
@@ -166,7 +148,6 @@ export const useDSATopic = () => {
   const currentLangName = langDisplayMap[selectedLang] || 'C++';
 
   // Interactive Code Playground States
-  const [editorCode, setEditorCode] = useState('');
   const [customInput, setCustomInput] = useState('');
   const [editorTheme, setEditorTheme] = useState('light');
   const [consoleLogs, setConsoleLogs] = useState([]);
@@ -193,9 +174,9 @@ export const useDSATopic = () => {
   const [celebrationData, setCelebrationData] = useState(null);
 
   // Feedback States
-  const [difficultyFeedback, setDifficultyFeedback] = useState('easy');
-  const [confidenceLevel, setConfidenceLevel] = useState(3);
-  const [revisionNeeded, setRevisionNeeded] = useState(false);
+  const [difficultyFeedback, setDifficultyFeedback] = useState(completed?.difficultyFeedback || 'easy');
+  const [confidenceLevel, setConfidenceLevel] = useState(completed?.confidenceLevel || 3);
+  const [revisionNeeded, setRevisionNeeded] = useState(completed?.revisionNeeded || false);
 
   // Progressive Question Difficulty State
   const [activeDifficulty, setActiveDifficulty] = useState(() => localStorage.getItem(`dsa_difficulty_${id}`) || 'beginner');
@@ -276,7 +257,7 @@ export const useDSATopic = () => {
       setCheckpointVideoFinished(false);
       setCheckpointCodePassed(false);
       try {
-        setCompletedCheckpoints(JSON.parse(localStorage.getItem(`dsa_cp_done_${id}`) || '[]'));
+        setCompletedCheckpoints(canSaveTopic ? JSON.parse(localStorage.getItem(`dsa_cp_done_${id}`) || '[]') : []);
       } catch { setCompletedCheckpoints([]); }
     }
   }, [id, topic, canSaveTopic]);
@@ -426,13 +407,12 @@ export const useDSATopic = () => {
     localStorage.setItem('striver_advanced', useStriverAdvanced.toString());
   }, [useStriverAdvanced]);
 
-  // Load topic & dependencies
+  const alreadyStarted = activeDomainProgress.startedTopics?.some(t => (t.topicId?._id || t.topicId) === id);
   useEffect(() => {
-    fetchTopic();
-    // Scroll back to top on page refresh or navigation
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    if (!canSaveTopic || alreadyStarted || completed) return;
+    startedTopics.read(user._id + '/' + id, () => api.post('/progress/start-topic', { topicId: id }).then(() => true))
+      .catch(() => toast.error('Could not save topic start.'));
+  }, [id, user?._id, canSaveTopic, alreadyStarted, completed]);
 
   const fetchSubmissions = useCallback(async () => {
     if (!user) return;
@@ -444,63 +424,9 @@ export const useDSATopic = () => {
     }
   }, [id, user?._id]);
 
-  const fetchTopic = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await api.get(`/topics/${id}`);
-      const fetchedTopic = res.data.data;
-      setTopic(fetchedTopic);
-
-      const topicLanguage = getTopicEditorLanguage(fetchedTopic,
-        localStorage.getItem('dsa_lang') || user?.profile?.onboardingAnswers?.dsa_language);
-      if (topicLanguage) setSelectedLang(topicLanguage);
-
-      // Reset ALL interactive playground variables on topic navigation
-      setChallengePassed(false);
-      setCompilerStatus('idle');
-      setConsoleLogs([]);
-      setTestResults([]);
-      setTerminalOutput(null);
-      setSelectedSubCode(null);
-      setEditorCode(''); // Clear editor so boilerplate loads fresh
-
-      // Fetch adjacent topics within active phase for progress listing
-      if (res.data.data.phaseId) {
-        const phaseRes = await api.get(`/topics/phase/${res.data.data.phaseId._id || res.data.data.phaseId}`);
-        setAllTopics(phaseRes.data.data);
-      }
-
-      // Automatically register starting topic in backend if not already logged
-      const isStarted = activeDomainProgress.startedTopics?.some(t => t.topicId === id || t.topicId?._id === id);
-      const isCompletedTopic = activeDomainProgress.completedTopics?.some(t => t.topicId === id || t.topicId?._id === id);
-
-      const matchesUserDomain = user && userDomainId === (fetchedTopic.domainId?._id || fetchedTopic.domainId);
-      if (matchesUserDomain && !isStarted && !isCompletedTopic) {
-        await api.post('/progress/start-topic', { topicId: id });
-      }
-
-      // Fetch submissions for submissions history list
-      if (matchesUserDomain) {
-        fetchSubmissions();
-      }
-
-      if (matchesUserDomain && isCompletedTopic) {
-        const completedData = activeDomainProgress.completedTopics?.find(t => t.topicId === id || t.topicId?._id === id);
-        if (completedData) {
-          setNotes(completedData.notes || '');
-          setConfidenceLevel(completedData.confidenceLevel || 3);
-          setDifficultyFeedback(completedData.difficultyFeedback || 'easy');
-          setRevisionNeeded(completedData.revisionNeeded || false);
-        }
-      }
-
-    } catch (err) {
-      toast.error('Failed to load topic details');
-      navigate('/roadmap');
-    } finally {
-      setLoading(false);
-    }
-  }, [id, user, activeDomainProgress.completedTopics, activeDomainProgress.startedTopics, fetchSubmissions, refreshUser, navigate]);
+  useEffect(() => {
+    if (canSaveTopic && !isDsaDomain) fetchSubmissions();
+  }, [canSaveTopic, isDsaDomain, fetchSubmissions]);
 
   // Dynamic boilerplate loaders
   const isWebDevDomain = topic?.domainId?.slug === 'web-development' || topic?.domainId === 'web-development' ||
@@ -549,6 +475,18 @@ export const useDSATopic = () => {
 
   // isLastCheckpoint comes from the content data itself — no hardcoding
   const isLastCp = activeCheckpointContent?.isLastCheckpoint || false;
+  const pathForLanguage = language => 'inmemory://careerforge/' + [
+    user?._id || 'guest', id, isCheckpointMode ? activeCheckpoint : 'lesson',
+    activeDifficulty, dsaCourse, language
+  ].map(encodeURIComponent).join('/');
+  const modelPath = pathForLanguage(selectedLang);
+  const boilerplate = (isCheckpointMode ? activeCheckpointContent : langContent)?.editorBoilerplate || '';
+  const [editorCode, setEditorCode] = useEditorDraft(modelPath, boilerplate);
+  const runningModel = useRef(null);
+  useLayoutEffect(() => {
+    runningModel.current = modelPath;
+    return () => { runningModel.current = null; };
+  }, [modelPath]);
 
   const [videoCompletion, setVideoCompletion] = useState({});
   const isDsaVideoDone = (topicId, video) => {
@@ -560,6 +498,7 @@ export const useDSATopic = () => {
   const setDsaVideoFinished = useCallback((done) => {
     if (!canSaveTopic || !activeCompletionKey) return;
     writeDsaVideoDone(id, activeVideo, done);
+    selection.onProgressChange?.();
     setVideoCompletion((previous) => ({ ...previous, [activeCompletionKey]: done }));
   }, [id, activeVideo, activeCompletionKey, canSaveTopic]);
   const checkpointVideoEmbedUrl = isDsaDomain
@@ -686,35 +625,19 @@ export const useDSATopic = () => {
     onBeforeDestroy: handleTutorialBeforeDestroy,
   });
 
-  // Reset boilerplate when topic, language, or difficulty changes
   useEffect(() => {
-    if ((!isDsaDomain || !isCheckpointMode) && langContent?.editorBoilerplate) {
-      setEditorCode(langContent.editorBoilerplate);
-      setTestResults([]);
-      setConsoleLogs([]);
-      setCompilerStatus('idle');
-      setChallengePassed(false);
-      setTerminalOutput(null);
-    }
-  }, [langContent, isDsaDomain, isCheckpointMode]);
-
-  // Reset editor boilerplate when the active checkpoint changes
-  useEffect(() => {
-    if (isCheckpointMode && activeCheckpointContent?.editorBoilerplate) {
-      setCheckpointCodePassed(false);
-      setEditorCode(activeCheckpointContent.editorBoilerplate);
-      setTestResults([]);
-      setConsoleLogs([]);
-      setCompilerStatus('idle');
-      setChallengePassed(false);
-      setTerminalOutput(null);
-    }
-  }, [isCheckpointMode, activeCheckpointContent]);
+    setCheckpointCodePassed(false);
+    setTestResults([]);
+    setConsoleLogs([]);
+    setCompilerStatus('idle');
+    setChallengePassed(false);
+    setTerminalOutput(null);
+  }, [modelPath]);
 
   // Restores a historical submission back into the editor
   const handleLoadSubmission = (subCode, subLang) => {
     setSelectedLang(normalizeDsaLanguage(subLang));
-    setEditorCode(subCode);
+    setEditorCode(subCode, pathForLanguage(normalizeDsaLanguage(subLang)));
     toast.success("Loaded past submission code into the editor!");
   };
 
@@ -861,9 +784,11 @@ export const useDSATopic = () => {
     setTestResults([]);
     try {
       const output = await executeProgram(codeApi.execute, currentLangName, editorCode, customInput ?? '');
+      if (runningModel.current !== modelPath) return;
       setTerminalOutput(output);
       setCompilerStatus(output.executionStatus ? 'failed' : 'passed');
     } catch (error) {
+      if (runningModel.current !== modelPath) return;
       setCompilerStatus('failed');
       setTerminalOutput({ stdout: '', stderr: error.response?.data?.message || error.message || 'Execution failed.', executionStatus: 'Execution failed' });
     }
@@ -1280,6 +1205,8 @@ export const useDSATopic = () => {
 
   // Setup Emmet-like snippets and HTML language features for Monaco
   const handleEditorWillMount = (monaco) => {
+    if (configuredMonaco.has(monaco)) return;
+    configuredMonaco.add(monaco);
     // Ensure HTML language defaults are rich
     if (monaco.languages.html && monaco.languages.html.htmlDefaults) {
       monaco.languages.html.htmlDefaults.setOptions({
@@ -1353,7 +1280,7 @@ export const useDSATopic = () => {
     activeDomainSlug, activeDomainKey, activeDomainProgress,
     isCompleted, nextTopic, prevTopic, allTopics,
     // topic
-    topic, loading,
+    topic, loading: false,
     // learning flow
     learningStep, setLearningStep, advanceStep, isChallengeUnlocked,
     isVideoFinished, setIsVideoFinished,
@@ -1361,7 +1288,7 @@ export const useDSATopic = () => {
     selectedLang, setSelectedLang, useStriverAdvanced, setUseStriverAdvanced,
     dsaCourse, currentLangName,
     // editor state
-    editorCode, setEditorCode,
+    editorCode, setEditorCode, modelPath,
     customInput, setCustomInput,
     editorTheme, setEditorTheme, toggleWorkspaceTheme,
     consoleLogs, setConsoleLogs,
@@ -1409,6 +1336,6 @@ export const useDSATopic = () => {
     handleCheckpointCompleteTopic,
     handleGamificationUpdate, handleLoadSubmission,
     handleEditorWillMount, handleOpenInNewTab,
-    triggerConfettiExplosion, fetchSubmissions, fetchTopic
+    triggerConfettiExplosion, fetchSubmissions
   };
 };

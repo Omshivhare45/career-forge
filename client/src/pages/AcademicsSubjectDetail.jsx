@@ -1,30 +1,18 @@
-import GlobalLoader from '../components/GlobalLoader';
-import React, { useState, useEffect } from 'react';
+import ContentSkeleton from '../components/ContentSkeleton';
+import { paths, prefetch } from '../api/curriculum';
+import { useCurriculum } from '../hooks/useCurriculum';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import api from '../api/axios';
-import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
-import { FiChevronLeft, FiLock, FiUnlock, FiCheckCircle, FiPlay, FiBook } from 'react-icons/fi';
-import { FaGraduationCap } from 'react-icons/fa';
+import { FiChevronLeft, FiLock, FiCheckCircle, FiPlay, FiBook } from 'react-icons/fi';
 
 const AcademicsSubjectDetail = () => {
   const { subjectId } = useParams();
   const navigate = useNavigate();
 
-  const [subject, setSubject] = useState(null);
-  const [chapters, setChapters] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    api.get('/academics/chapters', { params: { subjectId }, signal: controller.signal })
-      .then(({ data }) => { setSubject(data.subject); setChapters(data.data || []); })
-      .catch(() => { if (!controller.signal.aborted) { setSubject(null); toast.error('Failed to load chapters'); } })
-      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
-    return () => controller.abort();
-  }, [subjectId]);
-  if (loading) return <GlobalLoader fullScreen={false} title="Loading your subject" />;
+  const { data, loading, error } = useCurriculum(paths.chapters(subjectId));
+  const subject = data?.subject;
+  const chapters = data?.data || [];
+  if (loading) return <ContentSkeleton title="Loading your subject" />;
+  if (error) return <p role="alert" className="p-6">Could not load chapters.</p>;
 
   if (!subject) {
     return (
@@ -170,6 +158,8 @@ const AcademicsSubjectDetail = () => {
                 ) : (
                   <Link
                     to={`/academics/chapter/${chapter._id}`}
+                    onPointerEnter={() => prefetch(paths.videos(chapter._id))}
+                    onFocus={() => prefetch(paths.videos(chapter._id))}
                     className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-[var(--shadow-sm)] hover:-translate-y-0.5 transition-all text-white ${
                       isCompleted 
                         ? 'bg-green-600 hover:bg-green-700 shadow-green-200' 

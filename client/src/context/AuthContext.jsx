@@ -10,9 +10,20 @@ import api, { setApiSessionToken } from '../api/axios';
 
 const AuthContext = createContext(null);
 
+// Share only an outstanding verification. A later mutation can request a fresh user.
+const verifications = new Map();
+function verify(token) {
+  if (!verifications.has(token)) {
+    const request = api.get('/auth/me', { headers: { Authorization: 'Bearer ' + token } })
+      .finally(() => verifications.delete(token));
+    verifications.set(token, request);
+  }
+  return verifications.get(token);
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('cf_token')));
 
   useEffect(() => {
     let cancelled = false;
@@ -27,7 +38,7 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const { data } = await api.get('/auth/me', { headers: { Authorization: 'Bearer ' + token } });
+        const { data } = await verify(token);
 
         if (!cancelled && localStorage.getItem('cf_token') === token) {
           setApiSessionToken(token);
@@ -72,16 +83,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     const token = localStorage.getItem('cf_token');
     if (!token) return null;
-    const { data } = await api.get('/auth/me');
+    const { data } = await verify(token);
     if (localStorage.getItem('cf_token') !== token) return null;
 
     setUser(data.user);
 
     return data.user;
-  };
+  }, []);
 
   return (
     <AuthContext.Provider

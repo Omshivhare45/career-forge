@@ -1,3 +1,4 @@
+import { paths, prefetch } from '../../../api/curriculum';
 import { useState } from 'react';
 import { FiChevronDown, FiCheckCircle, FiCircle, FiFolder } from 'react-icons/fi';
 
@@ -111,6 +112,8 @@ export const WorkspaceSidebar = ({
                           <div key={topicId} className="ml-3 mr-2 border-l border-[var(--border)]">
                             <button
                               type="button"
+                              onPointerEnter={() => prefetch(paths.topic(topicId))}
+                              onFocus={() => prefetch(paths.topic(topicId))}
                               onClick={() => onSelectTopic(topic)}
                               className={`w-full flex items-start gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer text-left ${
                                 isActiveTopic

@@ -28,7 +28,6 @@ const ProblemSection = ({ ctx, variant }) => {
     isLastCp,
     markCheckpointComplete,
     setCheckpointCodePassed,
-    setEditorCode,
     setCompilerStatus,
     setTestResults,
     setConsoleLogs,
@@ -135,7 +134,6 @@ const ProblemSection = ({ ctx, variant }) => {
             }
             markCheckpointComplete(activeCheckpoint);
             setCheckpointCodePassed(false);
-            setEditorCode('');
             setCompilerStatus('idle');
             setTestResults([]);
             setConsoleLogs([]);
@@ -166,7 +164,6 @@ const ProblemSection = ({ ctx, variant }) => {
               markCheckpointComplete(activeCheckpoint);
               setCheckpointVideoFinished(false);
               setCheckpointCodePassed(false);
-              setEditorCode('');
               setCompilerStatus('idle');
               setTestResults([]);
               setConsoleLogs([]);

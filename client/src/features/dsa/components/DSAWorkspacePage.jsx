@@ -1,35 +1,23 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDomain, getDomainTopics } from '../../../api/curriculum';
+import { paths, prefetch } from '../../../api/curriculum';
+import { useCurriculum } from '../../../hooks/useCurriculum';
+import { useDsaSelection } from '../hooks/useDsaSelection';
+import ContentSkeleton from '../../../components/ContentSkeleton';
+import { roadmapPath } from '../../../utils/guestNavigation';
 import { useAuth } from '../../../context/AuthContext';
 import { FiMenu, FiChevronRight, FiCheckCircle, FiPlay, FiZap, FiBookOpen } from 'react-icons/fi';
 import { getDsaTopicNeighbors, getDsaTopicPath, getDsaTrackSections } from '../utils/dsaVideoCatalog';
-import { DSA_TUTORS, DSA_TUTOR_OPTIONS, readDsaVideoDone, readStoredDsaTutor, writeStoredDsaTutor } from '../../../utils/dsaPersonalization';
+import { DSA_TUTORS, DSA_TUTOR_OPTIONS, readDsaVideoDone } from '../../../utils/dsaPersonalization';
 import WorkspaceSidebar from './WorkspaceSidebar';
-import { VideoPlayer } from './VideoPlayer';
-const ProblemSection = lazy(() => import('./ProblemSection'));
-const CodeWorkspace = lazy(() => import('./CodeWorkspace').then((module) => ({ default: module.CodeWorkspace })));
-import { TopicNavigation } from './TopicNavigation';
-import { CelebrationOverlay } from './CelebrationOverlay';
-import { SubmissionModal } from './SubmissionModal';
-const RecursionVisualizer = lazy(() => import('../../../components/RecursionVisualizer'));
 
-// Unified DSA learning workspace.
-// One contiguous page: sidebar (phases → topics) + a stable
-// main area (title/progress header → video strip → video/lesson → editor).
-//   ctx truthy  → deep-linked topic workspace (/topic/:id), fully interactive.
-//   ctx null    → read-only roadmap workspace (/roadmap) that deep-links into
-//                 /topic/:id when a topic is opened.
-export const DSAWorkspacePage = ({ ctx, roadmapDomainId, roadmapCourse }) => {
+// Course navigation outlives the active lesson, including cold detail reads.
+export const DSAWorkspacePage = ({ activeTopic, pending, roadmapDomainId, renderLesson }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [roadmapTutor, setRoadmapTutor] = useState(readStoredDsaTutor);
-  const tutor = ctx?.dsaTutor || roadmapTutor;
-  const selectTutor = ctx?.selectDsaTutor || ((value) => setRoadmapTutor(writeStoredDsaTutor(value)));
-
-  const [course, setCourse] = useState(null);
-  const [courseTopics, setCourseTopics] = useState({});
-  const [courseLoading, setCourseLoading] = useState(true);
+  const selection = useDsaSelection(activeTopic);
+  const { dsaTutor: tutor, selectDsaTutor: selectTutor, activeVideo, activeVideoKey } = selection;
+  const [, progressChanged] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1024);
 
@@ -42,46 +30,24 @@ export const DSAWorkspacePage = ({ ctx, roadmapDomainId, roadmapCourse }) => {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const domainId = ctx?.topic?.domainId?._id || roadmapDomainId || user?.selectedDomain?._id || user?.selectedDomain;
-
-  useEffect(() => {
-    if (!domainId) return;
-    let cancelled = false;
-    Promise.all([roadmapCourse || getDomain(domainId), getDomainTopics(domainId)])
-      .then(([domain, topics]) => {
-        if (cancelled) return;
-        const byPhase = {};
-        for (const topic of topics) (byPhase[topic.phaseId] ||= []).push(topic);
-        setCourse(domain);
-        setCourseTopics(byPhase);
-      })
-      .catch(() => {/* roadmap shell handles errors */}
-      )
-      .finally(() => {
-        if (!cancelled) setCourseLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [domainId, roadmapCourse]);
-
-  const activeTopicId = ctx?.id || null;
-  const activeTopic = ctx?.topic || null;
-
-  const activeVideo = ctx?.activeVideo || null;
-  const activeVideoKey = ctx?.activeVideoKey || null;
-
-  const completedTopicIds = useMemo(() => {
-    const list = ctx?.activeDomainProgress?.completedTopics || user?.domainsProgress?.dsa?.completedTopics || [];
-    return list.map((t) => t.topicId?._id || t.topicId).filter(Boolean);
-  }, [ctx, user]);
-
-  const sections = useMemo(() => getDsaTrackSections(course?.phases || [], courseTopics, tutor),
-    [course, courseTopics, tutor]);
+  const domainId = roadmapDomainId;
+  const course = useCurriculum(domainId && paths.domain(domainId));
+  const index = useCurriculum(domainId && paths.domainTopics(domainId));
+  const courseTopics = useMemo(() => {
+    const grouped = {};
+    for (const topic of index.data?.data || []) (grouped[topic.phaseId] ||= []).push(topic);
+    return grouped;
+  }, [index.data]);
+  const activeTopicId = activeTopic?._id;
+  const completedTopicIds = useMemo(() => (user?.domainsProgress?.dsa?.completedTopics || [])
+    .map(t => t.topicId?._id || t.topicId), [user]);
+  const sections = useMemo(() => getDsaTrackSections(course.data?.data?.phases || [], courseTopics, tutor),
+    [course.data, courseTopics, tutor]);
   const sectionTopic = sections.flatMap((section) => section.topics).find((item) =>
     item._id === activeTopicId && item.videos.some((video) => video.key === activeVideoKey));
-  const topicVideos = sectionTopic?.videos || ctx?.topicVideos || [];
-  const videoDone = ctx?.isDsaVideoDone || (user ? readDsaVideoDone : () => false);
+  const topicVideos = sectionTopic?.videos || selection.topicVideos;
+  const enrolledDomain = user?.activeDomain || user?.selectedDomain;
+  const videoDone = (enrolledDomain?._id || enrolledDomain) === domainId ? readDsaVideoDone : () => false;
   const mappedVideos = topicVideos.filter((video) => video.videoId);
   const doneVideos = mappedVideos.filter((video) => videoDone(activeTopicId, video)).length;
   const { previous, next } = getDsaTopicNeighbors(sections, activeTopicId, activeVideo);
@@ -91,14 +57,12 @@ export const DSAWorkspacePage = ({ ctx, roadmapDomainId, roadmapCourse }) => {
     if (isMobile) setSidebarOpen(false);
   };
 
-  const missingVideo = (
-    <p className="px-5 py-4 text-xs font-semibold text-[var(--text-muted)] border-b border-[var(--border)]">
-      No video is mapped for this lesson in {DSA_TUTOR_OPTIONS.find((option) => option.key === tutor)?.label}.
-    </p>
-  );
-  const sectionCtx = ctx && { ...ctx, nextTopic: next, nextTopicPath: next && getDsaTopicPath(next) };
-  const isCheckpointVideo = activeVideo?.type === 'checkpoint';
-  const cpContent = ctx?.activeCheckpointContent || null;
+  const nextId = next?._id;
+  useEffect(() => {
+    if (!activeTopicId || !nextId || nextId === activeTopicId) return;
+    const timer = setTimeout(() => prefetch(paths.topic(nextId)), 350);
+    return () => clearTimeout(timer);
+  }, [activeTopicId, nextId]);
 
   return (
     <div className="flex h-full min-h-0 w-full overflow-hidden bg-[var(--bg-main)] relative">
@@ -112,7 +76,7 @@ export const DSAWorkspacePage = ({ ctx, roadmapDomainId, roadmapCourse }) => {
 
       <WorkspaceSidebar
         sections={sections}
-        loading={courseLoading}
+        loading={course.loading || index.loading}
         activeVideoKey={activeVideoKey}
         videoDone={videoDone}
         activeTopicId={activeTopicId}
@@ -140,6 +104,7 @@ export const DSAWorkspacePage = ({ ctx, roadmapDomainId, roadmapCourse }) => {
           </button>
         )}
 
+        {(course.error || index.error) && <p role="alert" className="p-3">Could not load the course navigation.</p>}
         <label className="flex items-center justify-end gap-2 px-4 py-2 shrink-0 bg-[var(--bg-card)] border-b border-[var(--border)] text-xs font-bold text-[var(--text-main)]">
           Learning track
           <select value={tutor} onChange={(event) => selectTutor(event.target.value)}
@@ -147,11 +112,9 @@ export const DSAWorkspacePage = ({ ctx, roadmapDomainId, roadmapCourse }) => {
             {DSA_TUTOR_OPTIONS.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
           </select>
         </label>
-        {courseLoading && !ctx ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-4 border-[var(--primary)] border-t-transparent" />
-          </div>
-        ) : !activeTopic || !ctx ? (
+        {(pending || ((course.loading || index.loading) && !activeTopic)) ? (
+          <ContentSkeleton title="Loading lesson" />
+        ) : !activeTopic ? (
           /* ─── Empty / select-a-topic state ─── */
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="max-w-2xl mx-auto px-6 py-14 text-center">
@@ -213,7 +176,7 @@ export const DSAWorkspacePage = ({ ctx, roadmapDomainId, roadmapCourse }) => {
                   )}
                 </div>
 
-                {ctx?.isCompleted && (
+                {completedTopicIds.includes(activeTopicId) && (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-[9px] font-black uppercase tracking-wider">
                     <FiCheckCircle size={11} /> Completed
                   </div>
@@ -226,7 +189,7 @@ export const DSAWorkspacePage = ({ ctx, roadmapDomainId, roadmapCourse }) => {
                 )}
                 <button
                   type="button"
-                  onClick={() => next ? handleSelectTopic(next) : navigate(ctx.roadmapLink)}
+                  onClick={() => next ? handleSelectTopic(next) : navigate(roadmapPath(domainId))}
                   title={next ? next.title : 'Back to roadmap'}
                   className="flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-gradient-to-r from-[var(--primary)] to-amber-500 text-[var(--text-main)] shadow-md cursor-pointer hover:scale-[1.02]"
                 >
@@ -239,7 +202,7 @@ export const DSAWorkspacePage = ({ ctx, roadmapDomainId, roadmapCourse }) => {
               <label className="flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b border-[var(--border)]">
                 Practice checkpoint
                 <select value={activeVideo?.checkpointId || ""}
-                  onChange={(event) => ctx.setActiveVideoKey(event.target.value
+                  onChange={(event) => selection.setActiveVideoKey(event.target.value
                     ? "cp:" + event.target.value : topicVideos[0]?.key || "")}
                   className="min-w-0 rounded-lg px-2 py-1 border border-[var(--border)] bg-[var(--bg-sub)]">
                   <option value="">Choose a checkpoint</option>
@@ -247,108 +210,9 @@ export const DSAWorkspacePage = ({ ctx, roadmapDomainId, roadmapCourse }) => {
                 </select>
               </label>
             )}
-            {/* ─── WORK REGION ─── */}
-            <Suspense fallback={<p className="p-4 text-sm" role="status">Loading lesson workspace?</p>}>
-            <div className="flex-1 flex min-h-0 overflow-hidden relative">
-              {isCheckpointVideo ? (
-                /* Checkpoint split workspace */
-                <div id="workspace-split-container" className="flex flex-col lg:flex-row h-full w-full overflow-hidden">
-                  {isMobile && (
-                    <div className="flex p-2 bg-[var(--bg-sub)] border-b border-[var(--border)] shrink-0 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => ctx.setActiveWorkspaceTab('learn')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-black uppercase transition-all cursor-pointer ${
-                          ctx.activeWorkspaceTab === 'learn'
-                            ? 'bg-[var(--primary)] text-[var(--text-main)] shadow-sm'
-                            : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border)]'
-                        }`}
-                      >
-                        🎬 Learn
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => ctx.setActiveWorkspaceTab('code')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-black uppercase transition-all cursor-pointer ${
-                          ctx.activeWorkspaceTab === 'code'
-                            ? 'bg-[var(--primary)] text-[var(--text-main)] shadow-sm'
-                            : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border)]'
-                        }`}
-                      >
-                        ⚡ Code
-                      </button>
-                    </div>
-                  )}
-                  <div
-                    style={{ width: isMobile ? '100%' : `${ctx?.leftWidth}%` }}
-                    className={`h-full flex flex-col border-r border-[var(--border)] bg-[var(--bg-main)] overflow-hidden shrink-0 ${isMobile && ctx.activeWorkspaceTab !== 'learn' ? 'hidden' : 'flex'}`}
-                  >
-                    <div className="bg-[var(--bg-main)] border-b border-[var(--border)] px-5 py-3 flex items-center justify-between shrink-0">
-                      <div>
-                        <div className="text-sm font-black text-[var(--text-main)] leading-tight">
-                          {ctx.CHECKPOINT_LABELS?.[ctx?.activeCheckpoint] || activeVideo?.title}
-                        </div>
-                        {cpContent?.subtitle && <div className="text-[10px] text-[var(--text-muted)] font-medium mt-0.5">{cpContent.subtitle}</div>}
-                      </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar">
-                      {activeVideo?.embedUrl ? <VideoPlayer ctx={ctx} variant="checkpoint" /> : missingVideo}
-                      {cpContent?.visualizationData && (
-                        <div className="p-5 border-b border-[var(--border)] h-[600px]">
-                          <RecursionVisualizer visualizationData={cpContent.visualizationData} />
-                        </div>
-                      )}
-                      {cpContent && <ProblemSection ctx={ctx} variant="checkpoint" />}
-                    </div>
-                  </div>
-                  {!isMobile && (
-                    <div
-                      className="w-1 h-full bg-[var(--border)] hover:bg-[var(--primary)] transition-colors cursor-col-resize flex-shrink-0"
-                      onMouseDown={ctx?.startResize}
-                    />
-                  )}
-                  <div
-                    className="h-full min-w-0 flex-shrink-0 [&>div]:!h-full"
-                    style={{ width: isMobile ? '100%' : `${100 - (ctx?.leftWidth || 60)}%` }}
-                  >
-                    <CodeWorkspace ctx={ctx} variant="checkpoint" />
-                  </div>
-                </div>
-              ) : (
-                /* Standard split workspace: video + lesson | editor */
-                <div id="workspace-split-container" className="flex flex-col lg:flex-row h-full w-full overflow-hidden">
-                  <TopicNavigation ctx={ctx} mode="standard" region="split-tabs" />
-                  <div
-                    style={{ width: isMobile ? '100%' : `${ctx?.leftWidth}%` }}
-                    className={`w-full h-full flex-col border-r border-[var(--border)] bg-[var(--bg-card)] overflow-hidden shrink-0 ${isMobile && ctx.activeWorkspaceTab !== 'learn' ? 'hidden' : 'flex'}`}
-                  >
-                    <div className="flex-1 overflow-y-auto custom-scrollbar bg-[var(--bg-main)]">
-                      {activeVideo?.embedUrl ? <VideoPlayer ctx={ctx} variant="workspace" /> : missingVideo}
-                      <ProblemSection ctx={sectionCtx} variant="lovebabbar" />
-                    </div>
-                  </div>
-                  {!isMobile && (
-                    <div
-                      onMouseDown={ctx?.startResize}
-                      className="hidden lg:flex w-1 hover:w-1.5 bg-[var(--border-light)] hover:bg-[var(--brand-green)] cursor-col-resize transition-all shrink-0 items-center justify-center relative group"
-                    />
-                  )}
-                  <div
-                    className="h-full min-w-0 flex-shrink-0 [&>div]:!h-full"
-                    style={{ width: isMobile ? '100%' : `${100 - (ctx?.leftWidth || 60)}%` }}
-                  >
-                    <CodeWorkspace ctx={ctx} variant="standard" />
-                  </div>
-                </div>
-              )}
-            </div>
-            </Suspense>
+            {renderLesson?.({ selection: { ...selection, onProgressChange: () => progressChanged(n => n + 1) }, next })}
           </>
         )}
-
-        {/* Celebration + submission preview */}
-        {ctx?.celebrationData && <CelebrationOverlay ctx={ctx} />}
-        {ctx?.selectedSubCode && <SubmissionModal ctx={ctx} />}
       </div>
     </div>
   );

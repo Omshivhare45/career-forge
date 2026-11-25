@@ -1,8 +1,9 @@
-import GlobalLoader from '../components/GlobalLoader';
-import React, { useState, useEffect, useRef } from 'react';
+import ContentSkeleton from '../components/ContentSkeleton';
+import { useCurriculum } from '../hooks/useCurriculum';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/axios';
-import { getDomains, getDomain, getDomainTopics } from '../api/curriculum';
+import { paths, prefetch } from '../api/curriculum';
 import { useSignInPrompt } from '../hooks/useSignInPrompt';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -58,17 +59,14 @@ const dsaLevelNames = DSA_LEVELS;
 const Roadmap = () => {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const promptSignIn = useSignInPrompt();
-  const [defaultDomainId, setDefaultDomainId] = useState(null);
-  const [domainData, setDomainData] = useState(null);
-  const roadmapRequest = useRef(0);
-  const [loading, setLoading] = useState(true);
-  const [activeLevel, setActiveLevel] = useState(null);
-
-  // DSA Sheet state
-  const [roadmapView, setRoadmapView] = useState('path'); // 'path' or 'sheet'
-  const [dsaSheetTopicId, setDsaSheetTopicId] = useState(null);
+  const select = (name, value) => setParams(previous => {
+    const next = new URLSearchParams(previous);
+    if (value == null) next.delete(name);
+    else next.set(name, String(value));
+    return next;
+  });
   const [sheetSearch, setSheetSearch] = useState('');
   const [sheetCompany, setSheetCompany] = useState('All');
   const [sheetTopic, setSheetTopic] = useState('All');
@@ -78,7 +76,7 @@ const Roadmap = () => {
   const [a2zSearch, setA2zSearch] = useState('');
   const [a2zDifficulty, setA2zDifficulty] = useState('All');
   const [a2zCompletions, setA2zCompletions] = useState([]);
-  const [expandedA2zStep, setExpandedA2zStep] = useState(null);
+  const expandedA2zStep = params.get('step');
 
   const getProgressKey = (slug) => {
     if (!slug) return 'dsa';
@@ -90,6 +88,17 @@ const Roadmap = () => {
     return 'dsa';
   };
 
+  const activeDomainId = user?.activeDomain?._id || user?.activeDomain || user?.selectedDomain?._id || user?.selectedDomain;
+  const requested = params.get('domain');
+  const explicitDomain = /^[\w-]+$/.test(requested || '') ? requested : activeDomainId;
+  const directory = useCurriculum(explicitDomain ? null : '/domains');
+  const domains = directory.data?.data;
+  const domainId = explicitDomain || (domains?.find(d => d.slug === 'dsa') || domains?.[0])?._id;
+  const roadmap = useCurriculum(domainId ? paths.domain(domainId) : null);
+  const domainData = roadmap.data?.data;
+  const dsaIndex = useCurriculum(domainData?.domain.slug === 'dsa' ? paths.domainTopics(domainId) : null);
+  const dsaSheetTopicId = dsaIndex.data?.data.find(t => t.title.includes('DSA Cheat Sheet'))?._id;
+  const canSave = Boolean(user && activeDomainId === domainId);
   const activeDomainSlug = domainData?.domain?.slug || user?.activeDomain?.slug || user?.selectedDomain?.slug || 'dsa';
   const activeDomainKey = getProgressKey(activeDomainSlug);
   const activeDomainProgress = user?.domainsProgress?.[activeDomainKey] || {
@@ -99,27 +108,13 @@ const Roadmap = () => {
     completedTopics: []
   };
 
-  const activeDomainId = user?.activeDomain?._id || user?.activeDomain || user?.selectedDomain?._id || user?.selectedDomain;
-  const requestedDomain = params.get('domain');
-  const domainId = (/^[\w-]+$/.test(requestedDomain || '') && requestedDomain) || activeDomainId || defaultDomainId;
-  const canSave = Boolean(user && activeDomainId === domainId);
-
-  useEffect(() => {
-    if (domainId) return;
-    getDomains().then((domains) => {
-      const fallback = domains.find((domain) => domain.slug === 'dsa') || domains[0];
-      if (fallback) setDefaultDomainId(fallback._id);
-      else setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [domainId]);
-  // Fetch roadmap data
-  useEffect(() => {
-    if (domainId) {
-      fetchRoadmap(domainId);
-    }
-  }, [domainId]);
-
-
+  const phaseParam = params.get('level');
+  const selectedPhase = domainData?.phases.find(phase => String(phase.phaseNumber) === phaseParam
+    && (!canSave || phase.phaseNumber <= activeDomainProgress.currentPhase));
+  const activeLevel = selectedPhase?.phaseNumber ?? (canSave ? activeDomainProgress.currentPhase : null)
+    ?? domainData?.phases[0]?.phaseNumber ?? 0;
+  const requestedView = params.get('view');
+  const roadmapView = domainData?.domain.slug === 'dsa' && ['sheet', 'a2z'].includes(requestedView) ? requestedView : 'path';
 
   useEffect(() => {
     if (!user) { setSheetCompletions([]); return; }
@@ -177,37 +172,11 @@ const Roadmap = () => {
     toast.success(isDone ? 'Marked problem as unsolved' : 'Marked problem as solved! 🚀');
   };
 
-  const fetchRoadmap = async (id) => {
-    const request = ++roadmapRequest.current;
-    try {
-      setLoading(true);
-      setDomainData(null);
-      setDsaSheetTopicId(null);
-      setRoadmapView("path");
-      const result = await getDomain(id);
-      if (request !== roadmapRequest.current) return;
-      setDomainData(result);
-      const progressKey = getProgressKey(result.domain.slug);
-      const currentPhase = canSave ? user?.domainsProgress?.[progressKey]?.currentPhase : null;
-      setActiveLevel(currentPhase ?? result.phases[0]?.phaseNumber ?? 0);
-      if (result.domain.slug === 'dsa') {
-        getDomainTopics(id).then((topics) => {
-          if (request !== roadmapRequest.current) return;
-          setDsaSheetTopicId(topics.find((topic) => topic.title.includes('DSA Cheat Sheet'))?._id ?? null);
-        }).catch(() => {});
-      }
-    } catch (err) {
-      if (request === roadmapRequest.current) toast.error('Failed to load roadmap');
-    } finally {
-      if (request === roadmapRequest.current) setLoading(false);
-    }
-  };
-
   const isTopicCompleted = (topicId) => {
     return canSave && activeDomainProgress.completedTopics?.some(t => t.topicId === topicId || t.topicId?._id === topicId);
   };
 
-  if (loading) return <GlobalLoader fullScreen={false} title="Loading your roadmap" />;
+  if (directory.loading || roadmap.loading) return <ContentSkeleton title="Loading your roadmap" />;
   
   if (!domainData) return <p className="px-6 py-12 text-center">Roadmap unavailable. <Link className="underline" to="/domains">Browse domains</Link></p>;
 
@@ -237,7 +206,7 @@ const Roadmap = () => {
         if (res.data.success) {
           toast.success('Level skipped successfully! 🚀', { id: 'skip-level' });
           await refreshUser();
-          fetchRoadmap(domainId);
+
         }
       } catch (err) {
         console.error(err);
@@ -324,7 +293,7 @@ const Roadmap = () => {
         <div className="flex justify-center mb-10">
           <div className="bg-[var(--bg-sub)] p-1.5 rounded-2xl border border-[var(--border)] flex flex-wrap justify-center gap-2 shadow-inner">
             <button
-              onClick={() => setRoadmapView('path')}
+              onClick={() => select('view', 'path')}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
                 roadmapView === 'path'
                   ? 'bg-gradient-to-r from-[var(--primary)] to-amber-500 text-white shadow-md'
@@ -334,7 +303,7 @@ const Roadmap = () => {
               🗺️ Journey Roadmap
             </button>
             <button
-              onClick={() => setRoadmapView('sheet')}
+              onClick={() => select('view', 'sheet')}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
                 roadmapView === 'sheet'
                   ? 'bg-gradient-to-r from-[var(--primary)] to-amber-500 text-white shadow-md'
@@ -344,7 +313,7 @@ const Roadmap = () => {
               🔥 Company DSA Sheet
             </button>
             <button
-              onClick={() => setRoadmapView('a2z')}
+              onClick={() => select('view', 'a2z')}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
                 roadmapView === 'a2z'
                   ? 'bg-gradient-to-r from-[var(--primary)] to-amber-500 text-white shadow-md'
@@ -361,7 +330,7 @@ const Roadmap = () => {
         isDSA ? (
           /* DSA: the roadmap path IS the unified learning workspace */
           <div className="h-[min(780px,calc(100svh-220px))] min-h-[420px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg-card)]">
-            <DSAWorkspacePage ctx={null} roadmapDomainId={domainId} roadmapCourse={domainData} />
+            <DSAWorkspacePage roadmapDomainId={domainId} />
           </div>
         ) : (
         <>
@@ -387,7 +356,8 @@ const Roadmap = () => {
                     {/* Level Node with custom states */}
                     <motion.div
                       whileHover={isUnlocked ? { scale: 1.08, y: -4 } : {}}
-                      onClick={() => isUnlocked && setActiveLevel(phaseNum)}
+                      onPointerEnter={() => isUnlocked && prefetch(paths.phase(phase._id))}
+                      onClick={() => isUnlocked && select('level', phaseNum)}
                       className={`level-node w-24 h-24 cursor-pointer relative ${nodeClass}`}
                     >
                       <span className="text-4xl mb-1 filter drop-shadow-sm">{getLevelIcon(index, domain.slug)}</span>
@@ -438,7 +408,6 @@ const Roadmap = () => {
           {/* Level Details Expedition Panel */}
           {activeLevel !== null && phases.length > 0 && (
             <motion.div 
-              key={activeLevel}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-12 card p-8 md:p-10 relative overflow-hidden border-2 border-[var(--border)]"
@@ -840,7 +809,7 @@ const Roadmap = () => {
                 return null;
               }
 
-              const isExpanded = expandedA2zStep === step.step;
+              const isExpanded = expandedA2zStep === String(step.step);
               
               const stepProblemsList = [];
               step.subcategories.forEach(sub => {
@@ -856,7 +825,7 @@ const Roadmap = () => {
                   className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm animate-fade-in"
                 >
                   <button
-                    onClick={() => setExpandedA2zStep(isExpanded ? null : step.step)}
+                    onClick={() => select('step', isExpanded ? null : step.step)}
                     className="w-full p-5 flex items-center justify-between text-left hover:bg-[var(--bg-sub)]/10 transition-colors"
                   >
                     <div className="flex items-center gap-4 flex-1">
@@ -991,26 +960,11 @@ const Roadmap = () => {
 };
 
 const TopicsList = ({ phaseId, isTopicCompleted, activeLevel, isDSA }) => {
-  const [topics, setTopics] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (phaseId) {
-      setLoading(true);
-      api.get(`/topics/phase/${phaseId}`).then(res => {
-        setTopics(res.data.data);
-        setLoading(false);
-      });
-    }
-  }, [phaseId]);
-
-  if (!phaseId) return <div className="text-center py-10 text-[var(--text-light)] italic">No missions defined for this level yet.</div>;
-  
-  if (loading) return (
-    <div className="text-center py-12">
-      <div className="animate-spin rounded-full h-8 w-8 border-4 border-[var(--primary)] border-t-transparent mx-auto"></div>
-    </div>
-  );
+  const { data, loading, error } = useCurriculum(phaseId ? paths.phase(phaseId) : null);
+  const topics = data?.data || [];
+  if (loading) return <ContentSkeleton title="Loading topics" />;
+  if (error) return <p role="alert" className="p-4">Could not load topics.</p>;
+  if (!phaseId) return <div className="text-center py-10">No missions defined for this level yet.</div>;
 
   // Show every topic in the phase. The server advances a phase only once ALL topics
   // in it are completed, so filtering by instructor here would make progression
@@ -1026,7 +980,9 @@ const TopicsList = ({ phaseId, isTopicCompleted, activeLevel, isDSA }) => {
 
         return (
           <Link 
-            key={topic._id} 
+            key={topic._id}
+            onPointerEnter={() => prefetch(paths.topic(topic._id))}
+            onFocus={() => prefetch(paths.topic(topic._id))}
             to={`/topic/${topic._id}`}
             className={`group p-5 rounded-2xl border-2 transition-all flex items-center justify-between ${
               completed 

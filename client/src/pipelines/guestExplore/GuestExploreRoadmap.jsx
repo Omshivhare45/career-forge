@@ -1,56 +1,34 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { FiArrowLeft, FiBookOpen, FiClock, FiLock } from 'react-icons/fi';
-import toast from 'react-hot-toast';
-import api from '../../api/axios';
+import { paths, prefetch } from '../../api/curriculum';
+import { useCurriculum } from '../../hooks/useCurriculum';
+import ContentSkeleton from '../../components/ContentSkeleton';
 import SignInPrompt from './SignInPrompt';
 
 const GuestExploreRoadmap = () => {
   const { domainSlug } = useParams();
-  const [roadmapState, setRoadmapState] = useState({ slug: null, data: null });
-  const [selectedPhase, setSelectedPhase] = useState(null);
+  const [params, setParams] = useSearchParams();
+  const { data, loading } = useCurriculum('/guest-explore/roadmaps/' + encodeURIComponent(domainSlug));
+  const roadmap = data?.data;
   const [signInPrompt, setSignInPrompt] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-
-    api.get(`/guest-explore/roadmaps/${encodeURIComponent(domainSlug)}`)
-      .then(({ data }) => {
-        if (active) setRoadmapState({ slug: domainSlug, data: data.data });
-      })
-      .catch(() => {
-        if (active) {
-          setRoadmapState({ slug: domainSlug, data: null });
-          toast.error('Could not load this roadmap.');
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [domainSlug]);
 
   const handleSelectPhase = (phase, index) => {
     if (index !== 0) {
       setSignInPrompt(true);
       return;
     }
-    setSelectedPhase({ slug: domainSlug, phase });
+    setParams({ phase: phase._id });
   };
 
-  const isRoadmapLoaded = roadmapState.slug === domainSlug;
-  const roadmap = isRoadmapLoaded ? roadmapState.data : null;
-
-  if (!isRoadmapLoaded) {
-    return <div className="flex min-h-[60vh] items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--brand-green)] border-t-transparent" /></div>;
-  }
+  if (loading) return <ContentSkeleton title="Loading roadmap" />;
 
   if (!roadmap) {
     return <main className="mx-auto max-w-4xl px-6 py-16 text-center"><h1 className="text-2xl font-black">Roadmap unavailable</h1><Link to="/" className="mt-5 inline-block font-bold text-[var(--brand-green)]">Return to CareerForge</Link></main>;
   }
 
   const { domain, phases, freeTopics } = roadmap;
-  const selectedFreePhase = selectedPhase?.slug === domainSlug ? selectedPhase.phase : null;
+  const selectedFreePhase = params.get('phase') === phases[0]?._id ? phases[0] : null;
   const isSelectedFreePhase = selectedFreePhase && selectedFreePhase.phaseNumber === phases[0]?.phaseNumber;
 
   return (
@@ -120,6 +98,8 @@ const GuestExploreRoadmap = () => {
                 <Link
                   key={topic._id}
                   to={`/explore/lesson/${topic._id}`}
+                  onPointerEnter={() => prefetch(paths.guestTopic(topic._id))}
+                  onFocus={() => prefetch(paths.guestTopic(topic._id))}
                   className="group flex items-center justify-between gap-4 rounded-2xl border border-slate-200 p-5 transition hover:border-[var(--brand-green)] hover:shadow-md"
                 >
                   <span>

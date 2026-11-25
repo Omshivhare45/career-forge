@@ -3,7 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { FiMenu, FiMessageSquare, FiSidebar, FiX } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import ApplicationSidebar from './ApplicationSidebar';
-import GlobalLoader from './GlobalLoader';
+import ContentSkeleton from './ContentSkeleton';
 import './applicationTheme.css';
 
 const GlobalAiChat = lazy(() => import('./GlobalAiChat'));
@@ -49,8 +49,6 @@ export default function Layout() {
   };
   const chatAvailable = user && !editorRoute && !location.pathname.startsWith('/admin') && location.pathname !== '/code-guru';
 
-  if (loading) return <GlobalLoader />;
-
   return (
     <div className="careerforge-app flex h-[100dvh] min-w-0 bg-[var(--land-bg-alt)] text-[var(--land-text)]">
       <a className="app-skip-link" href="#main-content">Skip to content</a>
@@ -70,10 +68,12 @@ export default function Layout() {
             <FiMenu size={20} />
           </button>
           <span className="text-logo-gradient font-black">CareerForge</span>
-          {!user && <span className="ml-auto text-xs font-bold text-[var(--text-muted)]">Guest</span>}
+          {!loading && !user && <span className="ml-auto text-xs font-bold text-[var(--text-muted)]">Guest</span>}
         </header>
         <main id="main-content" tabIndex={-1} ref={main} className={'min-h-0 min-w-0 flex-1 ' + (editorRoute ? 'overflow-hidden' : 'app-browse overflow-x-hidden overflow-y-auto')}>
-          <Suspense fallback={<GlobalLoader fullScreen={false} />}><Outlet /></Suspense>
+          <Suspense key={user?._id || 'guest'} fallback={<ContentSkeleton />}>
+            {loading ? <ContentSkeleton title="Restoring your session" /> : <Outlet />}
+          </Suspense>
         </main>
       </div>
 

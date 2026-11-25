@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { academicProgress, memberTopics, publicCurriculum } from './readCache';
 
 const getBaseURL = () => {
   if (import.meta.env.VITE_API_URL) {
@@ -30,7 +31,13 @@ const api = axios.create({ baseURL });
 
 let sessionToken = null;
 
+export const hasApiSession = () => Boolean(sessionToken);
+
 export const setApiSessionToken = (token) => {
+  if (sessionToken !== token) {
+    academicProgress.clear();
+    memberTopics.clear();
+  }
   sessionToken = token;
 };
 
@@ -39,6 +46,18 @@ api.interceptors.request.use((config) => {
     config.headers.set("Authorization", "Bearer " + sessionToken);
   }
   return config;
+});
+
+api.interceptors.response.use(response => {
+  const { method, url } = response.config;
+  if (method !== 'get' && method !== 'head') {
+    if (url === '/academics/progress' || url.startsWith('/admin/academics/')) academicProgress.clear();
+    if (/^\/(admin\/academics|topics|domains|phases|badges|assessments)(\/|$)/.test(url)) {
+      publicCurriculum.clear();
+      memberTopics.clear();
+    }
+  }
+  return response;
 });
 
 export default api;

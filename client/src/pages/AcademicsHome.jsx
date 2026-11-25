@@ -1,58 +1,29 @@
-import GlobalLoader from '../components/GlobalLoader';
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../api/axios';
-import toast from 'react-hot-toast';
+import ContentSkeleton from '../components/ContentSkeleton';
+import { paths, prefetch } from '../api/curriculum';
+import { useCurriculum } from '../hooks/useCurriculum';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiChevronRight, FiBookOpen, FiArrowRight } from 'react-icons/fi';
 import { FaGraduationCap } from 'react-icons/fa';
 
 const AcademicsHome = () => {
   const navigate = useNavigate();
-  const [semesters, setSemesters] = useState([]);
-  const [branches, setBranches] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [params, setParams] = useSearchParams();
+  const semesterList = useCurriculum(paths.semesters);
+  const branchList = useCurriculum(paths.branches);
+  const semesters = semesterList.data?.data || [];
+  const branches = branchList.data?.data || [];
+  const selectedSemester = semesters.find(sem => sem._id === params.get('semester'));
+  const selectedBranch = branches.find(branch => branch._id === params.get('branch'));
+  const showComingSoon = selectedBranch && !selectedBranch.isActive;
 
-  const [selectedSemester, setSelectedSemester] = useState(null);
-  const [selectedBranch, setSelectedBranch] = useState(null);
-  const [showComingSoon, setShowComingSoon] = useState(false);
-
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  const fetchInitialData = async () => {
-    try {
-      const [semRes, branchRes] = await Promise.all([
-        api.get('/academics/semesters'),
-        api.get('/academics/branches')
-      ]);
-      setSemesters(semRes.data.data || []);
-      setBranches(branchRes.data.data || []);
-    } catch (err) {
-      toast.error('Failed to load semesters and branches');
-    } finally {
-      setLoading(false);
-    }
+  const handleSemesterSelect = sem => setParams({ semester: sem._id });
+  const handleBranchSelect = branch => {
+    if (branch.isActive) navigate(`/academics/subjects/${selectedSemester._id}/${branch._id}`);
+    else setParams({ semester: selectedSemester._id, branch: branch._id });
   };
 
-  const handleSemesterSelect = (sem) => {
-    setSelectedSemester(sem);
-    setSelectedBranch(null);
-    setShowComingSoon(false);
-  };
-
-  const handleBranchSelect = (branch) => {
-    setSelectedBranch(branch);
-    if (!branch.isActive) {
-      setShowComingSoon(true);
-    } else {
-      setShowComingSoon(false);
-      navigate(`/academics/subjects/${selectedSemester._id}/${branch._id}`);
-    }
-  };
-
-  if (loading) return <GlobalLoader fullScreen={false} title="Loading academics" />;
+  if (semesterList.loading || branchList.loading) return <ContentSkeleton title="Loading academics" />;
+  if (semesterList.error || branchList.error) return <p role="alert" className="p-6">Could not load semesters and branches.</p>;
 
   return (
     <div className="fade-in max-w-7xl mx-auto py-12 px-6 lg:px-8">
@@ -120,6 +91,8 @@ const AcademicsHome = () => {
                     <motion.button type="button" aria-pressed={isSelected}
                       key={branch._id}
                       whileHover={{ y: -4 }}
+                      onPointerEnter={() => branch.isActive && prefetch(paths.subjects(selectedSemester._id, branch._id))}
+                      onFocus={() => branch.isActive && prefetch(paths.subjects(selectedSemester._id, branch._id))}
                       onClick={() => handleBranchSelect(branch)}
                       className={`p-6 rounded-2xl border-2 cursor-pointer text-center transition-all duration-300 ${
                         isSelected

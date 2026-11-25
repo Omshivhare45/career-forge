@@ -68,7 +68,7 @@ function DashboardContent({ user, refreshUser }) {
     const next = validatedReturnPath(params.get('next'), user?.role);
     try {
       if (domainId !== activeDomainId) await api.post('/progress/select-domain', { domainId });
-      const fresh = await refreshUser();
+      const fresh = domainId === activeDomainId ? user : await refreshUser();
       if (fresh?.profile?.isProfileComplete) {
         navigate(next || roadmapPath(domainId));
       } else {

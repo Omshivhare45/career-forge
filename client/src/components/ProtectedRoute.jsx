@@ -1,14 +1,14 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { loginPath } from '../utils/guestNavigation';
-import GlobalLoader from './GlobalLoader';
+import ContentSkeleton from './ContentSkeleton';
 
 const ProtectedRoute = ({ allowedRoles }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
-    return <GlobalLoader />;
+    return <ContentSkeleton title="Restoring your session" />;
   }
 
   if (!user) {

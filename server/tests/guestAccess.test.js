@@ -42,6 +42,22 @@ function bootFixture() {
       findById(id) { return signedQuery(users[id]); },
       async findOne({ googleId }) { return users[googleId] || null; },
     },
+    Topic: {
+      findById(id) {
+        return signedQuery({
+          _id: id, isActive: true, title: 'Preview topic',
+          phaseId: {
+            _id: id === chapterId ? 'first' : 'later', isActive: true,
+            domainId: { equals: value => value === 'domain' },
+          },
+          domainId: { _id: 'domain', isActive: true, slug: 'dsa' },
+          youtubeLink: 'https://youtu.be/fixture',
+        });
+      },
+    },
+    Phase: {
+      find: () => ({ select: () => ordered([{ _id: { equals: id => id === 'first' } }]) }),
+    },
     AcademicSemester: { find: () => ordered([{ _id: semesterId }]) },
     AcademicBranch: { find: () => ordered([{ _id: branchId }]) },
     AcademicSubject: {
@@ -88,12 +104,12 @@ function bootFixture() {
           return { getPayload: () => ({ sub: 'student', email: users.student.email }) };
         }
       } };
-      if (id.startsWith('../controllers/') && !/\/(?:academic|auth)Controller$/.test(id)) return handlers;
+      if (id.startsWith('../controllers/') && !/\/(?:academic|auth|guestExplore)Controller$/.test(id)) return handlers;
       if (id.startsWith('.')) return load(resolve(file, '..', id + '.js'));
       return require(id);
     };
     runInNewContext(readFileSync(file, 'utf8'), {
-      require: sandboxRequire,
+      require: sandboxRequire, URL,
       module,
       exports: module.exports,
       process: { env: { JWT_SECRET: secret, GOOGLE_CLIENT_ID: 'fixture-google-client' } },
@@ -106,7 +122,7 @@ function bootFixture() {
   for (const [path, file] of Object.entries({
     academics: 'academics', code: 'codeRoutes', progress: 'progress',
     submissions: 'submissionRoutes', auth: 'auth', admin: 'admin',
-    domains: 'domains', topics: 'topics', certificates: 'certificates',
+    domains: 'domains', topics: 'topics', 'guest-explore': 'guestExplore', certificates: 'certificates',
     ai: 'ai', 'admin/academics': 'adminAcademics',
   })) app.use('/api/' + path, load(resolve(__dirname, '../routes/' + file + '.js')));
 
@@ -132,11 +148,16 @@ test('guest, Google-authenticated student, logout and admin boundaries over HTTP
   const videosPath = '/academics/videos?chapterId=' + chapterId;
   const chaptersPath = '/academics/chapters?subjectId=' + subjectId;
   const subjectsPath = '/academics/subjects?semesterId=' + semesterId + '&branchId=' + branchId;
-  for (const path of ['/domains', '/topics/' + chapterId, '/academics/semesters',
+  for (const path of ['/domains', '/academics/semesters',
     '/academics/branches', subjectsPath, chaptersPath, videosPath]) {
     const response = await request(path);
     assert.equal(response.status, 200, path);
   }
+  const preview = await request('/guest-explore/topics/' + chapterId);
+  assert.equal(preview.status, 200);
+  assert.equal(preview.body.data.hasVideo, true);
+  assert.equal(preview.body.data.youtubeLink, undefined);
+  assert.equal((await request('/guest-explore/topics/' + subjectId)).status, 403);
   for (const token of [undefined, 'invalid-token']) {
     const guest = await request(videosPath, 'GET', token);
     assert.equal(guest.headers.get('cache-control'), 'private, no-store');
@@ -150,7 +171,7 @@ test('guest, Google-authenticated student, logout and admin boundaries over HTTP
   assert.deepEqual(fixture.progressReads, []);
 
   for (const [path, method] of [
-    ['/progress/dashboard', 'GET'], ['/progress/start-topic', 'POST'],
+    ['/topics/' + chapterId, 'GET'], ['/progress/dashboard', 'GET'], ['/progress/start-topic', 'POST'],
     ['/progress/complete-topic', 'POST'], ['/progress/video-progress', 'POST'],
     ['/progress/submit-code', 'POST'], ['/submissions/my', 'GET'],
     ['/certificates/my', 'GET'], ['/code/execute', 'POST'], ['/code/judge', 'POST'],
@@ -165,6 +186,7 @@ test('guest, Google-authenticated student, logout and admin boundaries over HTTP
   const token = login.body.token;
   assert.equal(login.body.user.role, 'student');
   assert.equal((await request('/auth/me', 'GET', token)).body.user._id, 'student');
+  assert.equal((await request('/topics/' + chapterId, 'GET', token)).status, 200);
   const signed = await request(videosPath, 'GET', token);
   assert.equal(signed.body.data[0].timestamp, 12);
   assert.equal(signed.body.lastOpenedVideoId, videoId);

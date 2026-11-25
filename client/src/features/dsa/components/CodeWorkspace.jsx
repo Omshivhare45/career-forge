@@ -122,7 +122,8 @@ export const CodeWorkspace = ({ ctx, variant }) => {
                 <div className="flex-1 overflow-hidden min-h-[400px] w-full relative" style={{ minHeight: '400px' }}>
                   <CodeEditor
                     language={selectedLang === 'js' ? 'javascript' : selectedLang}
-                    value={editorCode || (cpContent?.editorBoilerplate || '')}
+                    modelPath={ctx.modelPath}
+                    value={editorCode}
                     theme={editorTheme}
                     onChange={(val) => setEditorCode(val || '')}
                     options={{
@@ -331,6 +332,7 @@ style={{
             <CodeEditor
               language={selectedLang === 'js' ? 'javascript' : selectedLang}
               value={editorCode}
+              modelPath={ctx.modelPath}
               beforeMount={handleEditorWillMount}
               onChange={(val) => setEditorCode(val || '')}
               theme={editorTheme}

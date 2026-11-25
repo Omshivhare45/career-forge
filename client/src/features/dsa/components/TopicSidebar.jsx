@@ -13,7 +13,6 @@ const TopicSidebar = ({ ctx, mode }) => {
     isMobile,
     availableLanguages,
     selectedLang, setSelectedLang,
-    setEditorCode,
     CHECKPOINTS, CHECKPOINT_LABELS, CHECKPOINT_ICONS,
     activeCheckpoint, setActiveCheckpoint,
     completedCheckpoints,
@@ -82,7 +81,7 @@ const TopicSidebar = ({ ctx, mode }) => {
               return (
                 <button
                   key={lang}
-                  onClick={() => { setSelectedLang(lang); setEditorCode(''); }}
+                  onClick={() => setSelectedLang(lang)}
                   className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${selectedLang === lang ? 'bg-[var(--primary)] text-[var(--text-main)] shadow-sm' : 'bg-[var(--bg-sub)] text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
                 >
                   {label}
@@ -113,7 +112,6 @@ const TopicSidebar = ({ ctx, mode }) => {
                   if (ctx.canSaveTopic) localStorage.setItem(`dsa_checkpoint_${id}`, cpId);
                   setCheckpointVideoFinished(false);
                   setCheckpointCodePassed(false);
-                  setEditorCode('');
                   setCompilerStatus('idle');
                   setTestResults([]);
                   setConsoleLogs([]);

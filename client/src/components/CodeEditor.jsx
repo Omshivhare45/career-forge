@@ -1,6 +1,8 @@
-import { Suspense, lazy, useRef, useEffect, memo } from 'react';
+import { Suspense, lazy, useRef, useEffect, useLayoutEffect, memo } from 'react';
 import MobileEditorNotice from './MobileEditorNotice';
 import { useMobileViewport } from '../utils/useMobileViewport';
+
+import { retainEditorModels } from '../features/dsa/utils/editorModels';
 
 const MonacoEditor = lazy(() => import('@monaco-editor/react'));
 
@@ -95,12 +97,19 @@ const CodeEditor = memo(({
   theme = 'vs-dark',
   onChange,
   beforeMount,
+  modelPath,
   options = {},
   className = '',
 }) => {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
   const isMobile = useMobileViewport();
+  const release = useRef(null);
+  useLayoutEffect(() => () => {
+    release.current?.();
+    release.current = null;
+    editorRef.current = null;
+  }, [isMobile]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -111,7 +120,7 @@ const CodeEditor = memo(({
     });
     observer.observe(container);
     return () => observer.disconnect();
-  }, []);
+  }, [isMobile]);
 
   // Map generic theme names to our custom CareerForge themes
   const resolvedTheme = theme === 'vs-dark' ? 'careerforge-dark' : theme === 'light' ? 'careerforge-light' : theme;
@@ -157,24 +166,18 @@ const CodeEditor = memo(({
         <MonacoEditor
           width="100%"
           height="100%"
-          keepCurrentModel
+          path={modelPath}
+          keepCurrentModel={Boolean(modelPath)}
+          saveViewState={false}
           language={language}
           value={value}
           theme={resolvedTheme}
           beforeMount={handleBeforeMount}
-          
-onMount={(editor) => {
-  editorRef.current = editor;
-
-  const layoutEditor = () => {
-    editor.layout();
-  };
-
-  requestAnimationFrame(layoutEditor);
-  setTimeout(layoutEditor, 100);
-  setTimeout(layoutEditor, 300);
-}}
-
+          onMount={editor => {
+            editorRef.current = editor;
+            if (modelPath) release.current = retainEditorModels(editor);
+            editor.layout();
+          }}
           onChange={(val) => onChange?.(val ?? '')}
           loading={<EditorLoader />}
           options={mergedOptions}

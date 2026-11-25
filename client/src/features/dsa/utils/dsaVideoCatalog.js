@@ -1,4 +1,4 @@
-﻿import babbarLectures from './babbarLectures.json' with { type: 'json' };
+import babbarLectures from './babbarLectures.json' with { type: 'json' };
 import { DSA_TUTORS, getTopicTutorKeys, normalizeDsaTutor } from '../../../utils/dsaPersonalization.js';
 
 // Numbered lectures from the repository's yt_videos.json playlist snapshot.
@@ -164,7 +164,7 @@ export function getDsaTrackSections(phases, courseTopics, tutor) {
 }
 
 export const getDsaTopicPath = (topic, video = topic.videos?.[0]) =>
-  '/topic/' + topic._id + (video ? '?v=' + encodeURIComponent(video.key) : '');
+  '/topic/' + topic._id + (video ? '?v=' + encodeURIComponent(video.key) + '&track=' + encodeURIComponent(video.tutor) : '');
 
 export function getDsaTopicNeighbors(sections, topicId, activeVideo) {
   const topics = sections.flatMap((section) => section.topics);

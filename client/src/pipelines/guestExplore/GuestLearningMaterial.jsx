@@ -1,62 +1,43 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { FiArrowLeft, FiBookOpen, FiExternalLink, FiLock } from 'react-icons/fi';
-import toast from 'react-hot-toast';
-import api from '../../api/axios';
+import { paths } from '../../api/curriculum';
+import { useCurriculum } from '../../hooks/useCurriculum';
+import ContentSkeleton from '../../components/ContentSkeleton';
+import { loginPath } from '../../utils/guestNavigation';
 import SignInPrompt from './SignInPrompt';
 
 const GuestLearningMaterial = () => {
-  const { topicId } = useParams();
+  const { topicId, id } = useParams();
+  const Container = id ? 'section' : 'main';
+  const location = useLocation();
+  const signIn = loginPath({ ...location, pathname: '/topic/' + (topicId || id) });
   const navigate = useNavigate();
-  const [lessonState, setLessonState] = useState({ topicId: null, topic: null, forbidden: false });
   const [videoPrompt, setVideoPrompt] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-
-    api.get(`/guest-explore/topics/${encodeURIComponent(topicId)}`)
-      .then(({ data }) => {
-        if (active) setLessonState({ topicId, topic: data.data, forbidden: false });
-      })
-      .catch((error) => {
-        if (active) {
-          const forbidden = error.response?.status === 403;
-          setLessonState({ topicId, topic: null, forbidden });
-          if (!forbidden) toast.error('Could not load this learning material.');
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [topicId]);
-
-  const isLessonLoaded = lessonState.topicId === topicId;
-  const topic = isLessonLoaded ? lessonState.topic : null;
-
-  if (!isLessonLoaded) {
-    return <div className="flex min-h-[60vh] items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--brand-green)] border-t-transparent" /></div>;
-  }
+  const { data, loading, error } = useCurriculum(paths.guestTopic(topicId || id));
+  const topic = data?.data;
+  if (loading) return <ContentSkeleton title="Loading learning material" />;
 
   if (!topic) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-16 text-center">
+      <Container className="mx-auto max-w-3xl px-6 py-16 text-center">
         <h1 className="text-2xl font-black text-slate-900">This learning material needs an account</h1>
         <p className="mt-3 font-semibold text-slate-600">Sign in to access material outside the guest preview.</p>
-        <Link to="/login" className="mt-6 inline-flex rounded-xl bg-[var(--brand-green)] px-6 py-3 font-extrabold text-white">Sign In</Link>
-        {lessonState.forbidden && (
+        <Link to={signIn} className="mt-6 inline-flex rounded-xl bg-[var(--brand-green)] px-6 py-3 font-extrabold text-white">Sign In</Link>
+        {error?.response?.status === 403 && (
           <SignInPrompt
-            onClose={() => navigate('/login')}
+            signIn={signIn}
+            onClose={() => navigate(signIn)}
             title="Sign in to continue"
             message="This level is available after you sign in or create a free account."
           />
         )}
-      </main>
+      </Container>
     );
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-4xl px-5 py-10 sm:px-8">
+    <Container className="mx-auto min-h-screen max-w-4xl px-5 py-10 sm:px-8">
       <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-sm font-extrabold text-slate-600 transition hover:text-[var(--brand-green)]">
         <FiArrowLeft /> Back to roadmap
       </button>
@@ -112,12 +93,13 @@ const GuestLearningMaterial = () => {
       </article>
       {videoPrompt && (
         <SignInPrompt
+          signIn={signIn}
           onClose={() => setVideoPrompt(false)}
           title="Sign in to watch the video"
           message="Written learning materials are available to guests. Sign in or create a free account to watch video lessons."
         />
       )}
-    </main>
+    </Container>
   );
 };
 

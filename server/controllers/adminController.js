@@ -1,3 +1,4 @@
+const AudienceBrowser = require('../models/AudienceBrowser');
 const User = require('../models/User');
 const Feedback = require('../models/Feedback');
 
@@ -77,7 +78,9 @@ exports.getMyFeedback = async (req, res) => {
 // @desc    Admin dashboard stats
 exports.getAdminStats = async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments();
+    const [totalUsers, guestVisitors, videoViewers] = await Promise.all([
+      User.countDocuments(), AudienceBrowser.countDocuments({ guest: true }), AudienceBrowser.countDocuments({ viewer: true })
+    ]);
     const totalStudents = await User.countDocuments({ role: 'student' });
     const totalMentors = await User.countDocuments({ role: 'mentor' });
     const Domain = require('../models/Domain');
@@ -93,7 +96,7 @@ exports.getAdminStats = async (req, res) => {
     res.json({
       success: true,
       data: {
-        totalUsers,
+        totalUsers, guestVisitors, videoViewers,
         totalStudents,
         totalMentors,
         totalDomains,

@@ -39,7 +39,6 @@ const Resources = () => {
   return (
     <div className="fade-in max-w-7xl mx-auto py-10 px-6 lg:px-8">
       <div className="mb-12">
-        <div className="badge badge-blue mb-4 py-1.5 px-4 font-bold">Student Benefits</div>
         <h1 className="text-4xl font-extrabold text-[var(--land-text)] tracking-tight mb-4 flex items-center gap-4">
           Free Perks & Tools
         </h1>
@@ -65,7 +64,7 @@ const Resources = () => {
             <button 
               key={cat}
               onClick={() => setFilter(cat)}
-              className={`px-6 py-2.5 rounded-xl text-sm font-bold capitalize transition-all border whitespace-nowrap ${filter === cat ? 'bg-[var(--brand-green)] text-white border-[var(--brand-green)] shadow-lg shadow-green-100' : 'bg-white text-[var(--text-muted)] border-[var(--border)] hover:border-green-200'}`}
+              className={`px-6 py-2.5 rounded-xl text-sm font-bold capitalize transition-all border whitespace-nowrap ${filter === cat ? 'bg-[var(--brand-green)] text-[var(--dashboard-on-accent)] border-[var(--brand-green)] ' : 'bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border)] hover:border-[var(--brand-green)]'}`}
             >
               {cat}
             </button>
@@ -76,7 +75,7 @@ const Resources = () => {
       {filteredResources.length > 0 ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredResources.map((res) => (
-            <div key={res._id} className="card p-7 hover:border-green-200 hover:shadow-md transition-all duration-300 flex flex-col group bg-white border-soft">
+            <div key={res._id} className="card p-7 hover:border-[var(--brand-green)] hover:shadow-md transition-all duration-300 flex flex-col group bg-white border-soft">
               <div className="flex justify-between items-start mb-6">
                 <div className="w-14 h-14 rounded-2xl bg-[var(--land-bg-alt)] border border-[var(--border)] flex items-center justify-center text-3xl shadow-sm group-hover:bg-green-50 group-hover:text-[var(--brand-green)] transition-colors">
                   {res.icon || '🎁'}

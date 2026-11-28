@@ -7,6 +7,7 @@ import { getDomainDirectory } from '../api/curriculum';
 import api from '../api/axios';
 import { partitionDomains } from '../utils/domainAvailability';
 import PathwayCard from '../components/PathwayCard';
+import usePathwayScroll from '../hooks/usePathwayScroll';
 import './dashboardPathways.css';
 import { roadmapPath, validatedReturnPath } from '../utils/guestNavigation';
 
@@ -22,6 +23,7 @@ function DashboardContent({ user, refreshUser }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [domains, setDomains] = useState(null);
+  const dashboard = usePathwayScroll(domains);
   const [summary, setSummary] = useState(null);
   const [summaryFailed, setSummaryFailed] = useState(false);
   const [domainsFailed, setDomainsFailed] = useState(false);
@@ -62,15 +64,17 @@ function DashboardContent({ user, refreshUser }) {
 
   const { available, upcoming } = partitionDomains(domains || []);
 
-  const selectDomain = async (domainId) => {
+  const selectDomain = async (domainId, lessonPath) => {
     if (selection) return;
     setSelection(domainId);
-    const next = validatedReturnPath(params.get('next'), user?.role);
+    const next = validatedReturnPath(params.get('next'), user?.role) || lessonPath;
     try {
       if (domainId !== activeDomainId) await api.post('/progress/select-domain', { domainId });
       const fresh = domainId === activeDomainId ? user : await refreshUser();
       if (fresh?.profile?.isProfileComplete) {
-        navigate(next || roadmapPath(domainId));
+        if (next) navigate(next);
+        else if (domains?.find(domain => domain._id === domainId)?.slug === 'dsa') navigate('/roadmap', { state: { domainId } });
+        else navigate(roadmapPath(domainId));
       } else {
         navigate(next ? '/setup-profile?' + new URLSearchParams({ next }) : '/setup-profile');
       }
@@ -82,17 +86,17 @@ function DashboardContent({ user, refreshUser }) {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-7 sm:px-7 lg:py-9">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+    <div ref={dashboard} className="dashboard-content mx-auto w-full max-w-6xl space-y-9 px-4 py-7 sm:px-7 lg:py-10">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border)] pb-6">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-[var(--land-text)]">
+          <h1 className="dashboard-title">
             {user ? 'Welcome back, ' + (user.fullName?.split(' ')[0] || 'learner') : 'Explore CareerForge'}
           </h1>
-          <p className="mt-1 text-sm font-semibold text-[var(--text-muted)]">
+          <p className="mt-2 max-w-prose text-base text-[var(--text-muted)]">
             {user ? 'Pick up where you left off or explore another learning domain.' : 'Browse lectures and practice problems as a guest. Sign in to save progress and run code.'}
           </p>
         </div>
-        <Link to="/ide" className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-green)] px-4 py-2.5 text-sm font-extrabold text-white shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--brand-green-hover)]"><FiCode /> Code Editor</Link>
+        <Link to="/ide" className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-green)] px-4 py-2.5 text-sm font-extrabold text-[var(--dashboard-on-accent)] shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--brand-green-hover)]"><FiCode /> Code Editor</Link>
       </header>
 
       {user && (
@@ -100,7 +104,7 @@ function DashboardContent({ user, refreshUser }) {
           <section className="card p-4 sm:p-5">
             <h2 className="flex items-center gap-2 text-lg font-black"><FiBookOpen className="text-[var(--primary)]" /> Continue Learning</h2>
             {activeDomainId ? <>
-              <p className="mt-2 text-sm text-[var(--text-muted)]">{activeDomainName || 'Your active domain'} {summary?.currentPhaseData?.name && '? ' + summary.currentPhaseData.name}</p>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">{activeDomainName || 'Your active domain'} {summary?.currentPhaseData?.name && ' / ' + summary.currentPhaseData.name}</p>
               <ProgressBar value={activeProgress.overallProgress} />
               <Link to={lastTopic ? '/topic/' + encodeURIComponent(lastTopic) : roadmapPath(activeDomainId)}
                 className="mt-3 inline-flex items-center gap-2 font-black text-[var(--primary)]">Continue <FiArrowRight /></Link>
@@ -113,18 +117,18 @@ function DashboardContent({ user, refreshUser }) {
               <div><FiZap className="text-[var(--secondary)]" /><strong>{account?.dailyStreak ?? 0}</strong><br />Day streak</div>
               <div><FiAward className="text-[var(--primary)]" /><strong>{summary?.totalBadges ?? user.earnedBadges?.length ?? 0}</strong><br />Badges</div>
             </div>
-            <p className="mt-3 text-xs font-bold text-[var(--text-muted)]">Overall progress ? {overallProgress}%</p>
+            <p className="mt-3 text-xs font-bold text-[var(--text-muted)]">Overall progress <strong className="ml-1 text-[var(--land-text)]">{overallProgress}%</strong></p>
             <ProgressBar value={overallProgress} />
           </section>
         </div>
       )}
 
       <section id="domains" aria-labelledby="learning-domains" className="pathway-section">
-        <div className="mb-6 border-b border-[var(--border)] pb-5 text-center">
-          <h2 id="learning-domains" className="text-3xl font-black text-[var(--land-text)] sm:text-4xl">
-            Choose Your <span className="text-[var(--brand-green)]">Pathway</span>
+        <div className="mb-5">
+          <h2 id="learning-domains" className="dashboard-section-title">
+            Choose your <em className="dashboard-heading-accent">pathway.</em>
           </h2>
-          <p className="mt-2 text-sm font-bold text-[var(--land-nav)]">Choose an available track, follow its roadmap, and practice as you learn.</p>
+          <p className="mt-2 text-base text-[var(--land-nav)]">Choose an available track, follow its roadmap, and practice as you learn.</p>
           {user && <Link to="/career-guide" className="pathway-link mt-2 inline-block text-sm font-extrabold">Career guide</Link>}
         </div>
         {domainsFailed ? <p role="status">Domains are unavailable. <button className="pathway-link underline" type="button" onClick={() => setDomainReload((count) => count + 1)}>Try again</button></p>
@@ -148,7 +152,6 @@ function DashboardContent({ user, refreshUser }) {
               <h2 id="upcoming-domains" className="text-2xl font-black">Coming Soon</h2>
               <p className="mt-1 text-sm font-semibold text-[var(--land-nav)]">More pathways to explore as they become available.</p>
             </div>
-            <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">More ways to grow</span>
           </div>
           <div className="pathway-grid">{upcoming.map((domain) => <PathwayCard key={domain._id} domain={domain} comingSoon />)}</div>
         </>}

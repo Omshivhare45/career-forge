@@ -1,52 +1,108 @@
-import { Link } from 'react-router-dom';
-import { FiArrowRight } from 'react-icons/fi';
+import { getDomain, getDomainTopics } from '../api/curriculum';
+import { getDsaTrackSections, getDsaTopicPath } from '../features/dsa/utils/dsaVideoCatalog';
+import toast from 'react-hot-toast';
+import { useState } from 'react';
+import { DSA_TUTOR_OPTIONS, writeStoredDsaTutor } from '../utils/dsaPersonalization';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  FiActivity, FiBarChart2, FiBox, FiCheck, FiCheckCircle, FiCloud,
+  FiCpu, FiDatabase, FiGitBranch, FiGrid, FiLayers, FiLink, FiLock,
+  FiMonitor, FiPenTool, FiShield, FiSmartphone,
+} from 'react-icons/fi';
 import { roadmapPath } from '../utils/guestNavigation';
 
-// Landing.jsx's pathway icons and border pairings, with the yellow brand accent for data paths.
-const pathwayStyles = {
-  dsa: ['\u{1F9E0}', 'border-blue-200', 'var(--brand-blue)'],
-  'web-development': ['\u{1F310}', 'border-green-200', 'var(--brand-green)'],
-  'data-science': ['\u{1F4CA}', 'border-yellow-200', 'var(--brand-yellow)'],
-  'data-analytics': [null, 'border-yellow-200', 'var(--brand-yellow)'],
-  'ai-ml': [null, 'border-yellow-200', 'var(--brand-yellow)'],
-  'cloud-computing': ['\u2601\uFE0F', 'border-orange-200', 'var(--brand-orange)'],
-  devops: ['\u2601\uFE0F', 'border-orange-200', 'var(--brand-orange)'],
-  'system-design': ['\u{1F3D7}\uFE0F', 'border-yellow-200', 'var(--brand-yellow)'],
-  cybersecurity: ['\u{1F6E1}\uFE0F', 'border-red-200', 'var(--error)'],
+const domainCovers = {
+  dsa: '/images/domain_dsa.png',
+  'web-development': '/images/domain_webdev.png',
 };
 
-export default function PathwayCard({ domain, selected, progress, selection, onSelect, comingSoon = false }) {
-  const [icon, border, accent] = pathwayStyles[domain.slug] || [null, 'border-green-200', 'var(--brand-green)'];
+const domainSymbols = {
+  dsa: FiGitBranch,
+  'web-development': FiMonitor,
+  'data-science': FiActivity,
+  'data-analytics': FiBarChart2,
+  'cloud-computing': FiCloud,
+  devops: FiLayers,
+  'system-design': FiGrid,
+  cybersecurity: FiShield,
+  'app-development': FiSmartphone,
+  'ai-ml': FiCpu,
+  blockchain: FiLink,
+  'ui-ux': FiPenTool,
+  'database-administration': FiDatabase,
+  'qa-testing': FiCheckCircle,
+};
+
+function DomainArt({ domain, compact }) {
+  const cover = compact ? null : domainCovers[domain.slug];
+  const Symbol = domainSymbols[domain.slug];
   return (
-    <article
-      style={{ '--pathway-accent': accent }}
-      className={'pathway-card group flex min-w-0 flex-col rounded-3xl border-2 p-5 sm:p-6 ' + border + (comingSoon ? ' pathway-card--upcoming' : '')}
-    >
-      <div className="mb-4 flex items-start justify-between gap-2">
-        <span aria-hidden="true" className="pathway-icon grid size-14 shrink-0 place-items-center rounded-2xl text-3xl">
-          {icon || domain.icon || '\u{1F4DA}'}
-        </span>
-        {comingSoon && <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-extrabold text-amber-800">Coming Soon</span>}
-        {!comingSoon && selected && <span className="rounded-full bg-[var(--brand-green-light)] px-2.5 py-1 text-xs font-extrabold text-[var(--brand-green)]">Current path</span>}
+    <div className="pathway-card__stage" aria-hidden="true">
+      <div className="pathway-scroll-art">
+        {cover
+          ? <img className="pathway-card__illustration" src={cover} width="1024" height="1024" alt="" decoding="async" />
+          : <span className="pathway-card__emblem">{Symbol ? <Symbol /> : domain.icon || <FiBox />}</span>}
       </div>
-      <h3 className="mb-2 break-words text-xl font-black leading-tight">{domain.name}</h3>
-      <p className="flex-1 text-sm font-bold leading-relaxed text-[var(--land-nav)]">{domain.shortDescription}</p>
-      {!comingSoon && progress !== undefined && (
-        <div className="mt-4">
-          <p className="mb-1 text-xs font-extrabold text-[var(--land-nav)]">{progress}% complete</p>
-          <progress aria-label={domain.name + ' progress'} className="block h-1.5 w-full accent-[var(--brand-green)]" value={progress} max="100" />
-        </div>
-      )}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-[var(--border)] pt-3">
-        {comingSoon ? <p className="text-xs font-bold text-[var(--land-nav)]">This track is not open for enrollment yet.</p> : <Link to={roadmapPath(domain._id)} aria-label={'Explore track: ' + domain.name}
-          className="pathway-link inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest">
-          Explore Track <FiArrowRight strokeWidth={3} />
-        </Link>}
-        {!comingSoon && onSelect && (
-          <button type="button" disabled={Boolean(selection)} onClick={() => onSelect(domain._id)}
-            className="pathway-link text-sm font-extrabold underline underline-offset-4 disabled:opacity-50">
-            {selection === domain._id ? 'Selecting?' : 'Select path'}
-          </button>
+    </div>
+  );
+}
+
+export default function PathwayCard({ domain, selected, progress, selection, onSelect, comingSoon = false }) {
+  const [choice, setChoice] = useState(null);
+  const navigate = useNavigate();
+  const isDsa = domain.slug === 'dsa';
+  const [opening, setOpening] = useState(false);
+  async function chooseTutor(key) {
+    if (opening) return;
+    setOpening(true);
+    try {
+      const [course, topics] = await Promise.all([getDomain(domain._id), getDomainTopics(domain._id)]);
+      const grouped = {};
+      for (const topic of topics) (grouped[topic.phaseId?._id || topic.phaseId] ||= []).push(topic);
+      const lessons = getDsaTrackSections(course.phases, grouped, key)
+        .flatMap(section => section.topics.flatMap(topic => topic.videos.filter(video => video.embedUrl).map(video => ({ topic, video }))));
+      const entry = (key === 'babbar' && lessons.find(({ video }) => video.videoId === 't6zLJOCVqD0')) || lessons[0];
+      if (!entry) { toast.error('No playable lessons are available for this track.'); return; }
+      const destination = getDsaTopicPath(entry.topic, entry.video);
+      writeStoredDsaTutor(key);
+      if (choice === 'select') await onSelect(domain._id, destination);
+      else navigate(destination);
+      setChoice(null);
+    } catch {
+      toast.error('Could not open the track. Please try again.');
+    } finally { setOpening(false); }
+  }
+  return (
+    <article className={'pathway-card' + (comingSoon ? ' pathway-card--upcoming' : '')}>
+      <DomainArt domain={domain} compact={comingSoon} />
+      {comingSoon && <span className="pathway-card__status"><FiLock aria-hidden="true" />Coming soon</span>}
+      <div className="pathway-card__body">
+        {!comingSoon && selected && <span className="pathway-card__status"><FiCheck aria-hidden="true" />Current path</span>}
+        <h3>{domain.name}</h3>
+        <p className="pathway-card__description">{domain.shortDescription}</p>
+        {!comingSoon && progress !== undefined && (
+          <div className="pathway-card__progress">
+            <span>{progress}% complete</span>
+            <progress aria-label={domain.name + ' progress'} value={progress} max="100" />
+          </div>
+        )}
+        {comingSoon ? (
+          <p className="pathway-card__notice">This track is not open for enrollment yet.</p>
+        ) : (
+          choice ? <div className="pathway-card__actions" role="group" aria-label="Choose your DSA instructor">
+            <strong style={{ width: '100%' }}>Choose your instructor</strong>
+            {DSA_TUTOR_OPTIONS.map(tutor => <button key={tutor.key} disabled={opening} type="button" className="pathway-card__explore" onClick={() => chooseTutor(tutor.key)}>{tutor.label}</button>)}
+            <button type="button" className="pathway-card__select" disabled={opening} onClick={() => setChoice(null)}>Cancel</button>
+          </div> : <div className="pathway-card__actions">
+            {isDsa ? <button type="button" className="pathway-card__explore" onClick={() => setChoice('explore')}>Explore track</button> : <Link to={roadmapPath(domain._id)} aria-label={'Explore track: ' + domain.name} className="pathway-card__explore">
+              Explore track
+            </Link>}
+            {onSelect && (
+              <button type="button" disabled={Boolean(selection)} onClick={() => isDsa ? setChoice('select') : onSelect(domain._id)} className="pathway-card__select">
+                {selection === domain._id ? 'Selecting…' : 'Select path'}
+              </button>
+            )}
+          </div>
         )}
       </div>
     </article>

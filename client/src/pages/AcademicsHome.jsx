@@ -28,12 +28,9 @@ const AcademicsHome = () => {
   return (
     <div className="fade-in max-w-7xl mx-auto py-12 px-6 lg:px-8">
       {/* Header */}
-      <div className="mb-16 text-center max-w-2xl mx-auto">
-        <span className="text-xs font-black text-[var(--brand-green)] uppercase tracking-widest bg-[var(--primary-light)] px-3 py-1 rounded-full border border-green-200 flex items-center gap-1.5 w-fit mx-auto">
-          <FaGraduationCap /> University Syllabus
-        </span>
+      <div className="mb-10 max-w-3xl">
         <h1 className="text-4xl font-black text-[var(--text-main)] tracking-tight mt-4 mb-4">B.Tech Academics</h1>
-        <p className="text-lg text-[var(--text-muted)] font-bold leading-relaxed">
+        <p className="text-base text-[var(--text-muted)] font-normal leading-relaxed">
           Study semester-wise concepts with interactive video tutorials, chapter-by-chapter playlists, and comprehensive notes.
         </p>
       </div>
@@ -42,7 +39,7 @@ const AcademicsHome = () => {
         {/* Step 1: Semester Selection */}
         <div className="space-y-6">
           <h2 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
-            <span className="w-8 h-8 rounded-lg bg-[var(--primary)] text-white flex items-center justify-center text-sm font-black">1</span>
+            <span className="w-8 h-8 rounded-lg bg-[var(--primary)] text-[var(--dashboard-on-accent)] flex items-center justify-center text-sm font-black">1</span>
             Select Your Semester
           </h2>
           
@@ -56,13 +53,13 @@ const AcademicsHome = () => {
                   key={sem._id}
                   whileHover={{ y: -4 }}
                   onClick={() => handleSemesterSelect(sem)}
-                  className={`p-6 rounded-2xl border-2 cursor-pointer text-center transition-all duration-300 ${
+                  className={`p-5 rounded-xl border cursor-pointer text-left transition-all duration-300 ${
                     isSelected
                       ? 'border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)] shadow-md'
                       : 'border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--primary)] text-[var(--text-main)]'
                   }`}
                 >
-                  <div className="text-2xl mb-2">📚</div>
+                  <FaGraduationCap aria-hidden="true" className="mb-3 text-[var(--primary)]" />
                   <div className="font-black text-lg">{sem.name}</div>
                 </motion.button>
               );
@@ -80,7 +77,7 @@ const AcademicsHome = () => {
               className="space-y-6 pt-6 border-t border-[var(--border)]"
             >
               <h2 className="text-2xl font-black text-[var(--text-main)] flex items-center gap-3">
-                <span className="w-8 h-8 rounded-lg bg-[var(--primary)] text-white flex items-center justify-center text-sm font-black">2</span>
+                <span className="w-8 h-8 rounded-lg bg-[var(--primary)] text-[var(--dashboard-on-accent)] flex items-center justify-center text-sm font-black">2</span>
                 Select Your Branch
               </h2>
 

@@ -1,3 +1,4 @@
+import { recordAudience } from '../../../utils/audience';
 import { useEffect, useRef } from 'react';
 
 const YT_SCRIPT_ID = 'careerforge-youtube-iframe-api';
@@ -152,6 +153,7 @@ export const useYouTubePlayer = ({
               if (cancelled || !readyRef.current) return;
               const player = event.target;
               if (!player || typeof player.getCurrentTime !== 'function') return;
+              if (event.data === YT.PlayerState.PLAYING) recordAudience('viewer');
               callbacksRef.current.onStateChange?.(event);
             },
             onError: (event) => {

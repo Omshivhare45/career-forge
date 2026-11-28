@@ -1,51 +1,242 @@
-/* Dashboard adaptation of Landing.jsx's pathway section. */
-.pathway-section {
-  container-type: inline-size;
-}
-
 .pathway-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-auto-rows: 1fr;
-  gap: 1rem;
-}
-
-@container (min-width: 40rem) {
-  .pathway-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@container (min-width: 55rem) {
-  .pathway-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  grid-template-columns: repeat(auto-fit, minmax(min(19rem, 100%), 1fr));
+  gap: clamp(.875rem, 2vw, 1.5rem);
 }
 
 .pathway-card {
-  background: var(--land-bg);
-  box-shadow: var(--shadow-soft);
+  --path-cover-paper: #ff9959;
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 1.3rem;
+  border: 1px solid var(--border);
+  padding: .65rem;
   color: var(--land-text);
-  transition: border-color 180ms ease, box-shadow 180ms ease;
+  background: var(--bg-card);
+  box-shadow: 0 1px 1px #0000000c;
+  transition: border-color .25s ease, box-shadow .25s ease;
 }
 
-.dark .pathway-card {
-  border-color: color-mix(in srgb, var(--pathway-accent) 35%, var(--border));
+.pathway-card:has(.pathway-card__illustration[src$='domain_webdev.png']) {
+  --path-cover-paper: #c5c9c5;
 }
 
-.pathway-card:hover,
-.pathway-card:focus-within {
-  border-color: var(--pathway-accent);
-  box-shadow: var(--shadow-bubbly);
+.pathway-card__stage {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 2.15;
+  min-height: 8rem;
+  max-height: 15rem;
+  overflow: hidden;
+  overflow: clip;
+  border-radius: .85rem;
+  border: 1px solid #ffffff0f;
+  background-color: #161613;
+  background-image:
+    radial-gradient(ellipse at 62% 80%, #5b514137, transparent 68%),
+    linear-gradient(45deg, transparent 49.7%, #a59c8a15 49.7% 50.3%, transparent 50.3%),
+    linear-gradient(135deg, transparent 49.7%, #a59c8a15 49.7% 50.3%, transparent 50.3%);
+  background-size: auto, 40px 40px, 40px 40px;
 }
 
-.pathway-icon {
-  background: var(--land-bg-alt);
-  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.06);
+.pathway-card .pathway-scroll-art {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  inset: -16% 0;
+  pointer-events: none;
 }
 
+.pathway-card__illustration {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  filter: grayscale(1) sepia(.5) contrast(1.24);
+  mix-blend-mode: luminosity;
+  mask-image: radial-gradient(ellipse 47% 58% at center, #000 51%, transparent 98%);
+}
+
+.pathway-card__stage:has(.pathway-card__illustration)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--path-cover-paper);
+  mix-blend-mode: color;
+  opacity: .8;
+}
+
+.pathway-card__body {
+  padding: clamp(1.1rem, 2.4vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.pathway-card .pathway-card__body h3 {
+  color: var(--land-text);
+  margin: 0;
+  font: 500 clamp(1.7rem, 2.5vw, 2.5rem)/1.12 Georgia, 'Times New Roman', serif;
+  letter-spacing: -.046em;
+  overflow-wrap: anywhere;
+}
+
+.pathway-card__description {
+  margin: .65rem 0 1.4rem;
+  max-width: 48ch;
+  color: var(--land-nav);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.pathway-card__status {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  border: 1px solid var(--border);
+  padding: .25rem .55rem;
+  border-radius: 2rem;
+  color: var(--land-nav);
+  font-size: .76rem;
+  font-weight: 750;
+  line-height: 1.3;
+}
+.pathway-card__body .pathway-card__status {
+  margin-bottom: .8rem;
+  color: var(--brand-green);
+  background: var(--brand-green-light);
+}
+
+.pathway-card__progress {
+  width: 100%;
+  margin: auto 0 1.25rem;
+  color: var(--land-nav);
+  font-size: .8rem;
+  font-weight: 700;
+}
+.pathway-card__progress progress {
+  width: 100%;
+  height: .3rem;
+  display: block;
+  margin-top: .35rem;
+  border: 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  appearance: none;
+  background: var(--bg-sub);
+  color: var(--brand-green);
+}
+.pathway-card__progress progress::-webkit-progress-bar { background: var(--bg-sub); }
+.pathway-card__progress progress::-webkit-progress-value { background: var(--brand-green); border-radius: 1rem; }
+.pathway-card__progress progress::-moz-progress-bar { background: var(--brand-green); border-radius: 1rem; }
+
+.pathway-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: .375rem 1rem;
+  margin-top: auto;
+  padding-top: .9rem;
+  border-top: 1px solid var(--border);
+}
+.pathway-card__progress + .pathway-card__actions { margin-top: 0; }
+.pathway-card__explore,
+.pathway-card__select {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  font-size: .95rem;
+  font-weight: 750;
+}
+.pathway-card__explore {
+  padding: .4rem 1rem;
+  border-radius: .55rem;
+  background: var(--brand-green);
+  color: var(--dashboard-on-accent);
+  text-decoration: none;
+}
+.pathway-card__select {
+  border-radius: .4rem;
+  padding-inline: .35rem;
+  color: var(--land-nav);
+  text-decoration: underline;
+  text-underline-offset: .22em;
+}
+.pathway-card__select:disabled { opacity: .55; cursor: wait; }
+.pathway-card__explore:hover { background: var(--brand-green-hover); }
+
+.pathway-card--upcoming {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr;
+  align-items: start;
+  gap: 1rem;
+  padding: clamp(1.125rem, 2.25vw, 1.65rem);
+  background: var(--land-bg);
+  box-shadow: none;
+}
+.pathway-card--upcoming > .pathway-card__status { justify-self: end; align-self: center; }
+.pathway-card--upcoming .pathway-card__body { padding: 0; grid-column: 1 / -1; align-self: stretch; }
+.pathway-card--upcoming .pathway-card__body h3 {
+  font-family: inherit;
+  font-weight: 700;
+  font-size: clamp(1.18rem, 1.5vw, 1.45rem);
+  line-height: 1.2;
+  letter-spacing: -.03em;
+}
+.pathway-card--upcoming .pathway-card__description { font-size: .95rem; margin: .45rem 0 1rem; }
+.pathway-card__notice { margin: auto 0 0; color: var(--text-muted); font-size: .8125rem; line-height: 1.5; }
+.pathway-card--upcoming .pathway-card__stage {
+  aspect-ratio: 1;
+  height: 3.25rem;
+  width: 3.25rem;
+  min-height: 0;
+  border-radius: .75rem;
+  background: radial-gradient(ellipse at top left, #35241b, #201f1d 70%);
+  border-color: #5c574b;
+}
+.pathway-card__emblem { color: #ff9d61; font-size: 1.45rem; }
+.pathway-card__emblem svg { stroke-width: 1.45; }
 .pathway-link { color: var(--brand-green); }
 .pathway-link:hover { color: var(--brand-green-hover); }
 
+@media (hover: hover) {
+  .pathway-card:not(.pathway-card--upcoming):hover {
+    border-color: color-mix(in srgb, var(--brand-green) 60%, var(--border));
+    box-shadow: var(--shadow-bubbly);
+  }
+}
+@media (max-width: 480px) {
+  .pathway-card__stage { aspect-ratio: 2.25; }
+  .pathway-card--upcoming .pathway-card__stage { aspect-ratio: 1; }
+}
 @media (prefers-reduced-motion: reduce) {
   .pathway-card { transition: none; }
 }
 
-.pathway-card--upcoming { box-shadow: none; }
-.pathway-card--upcoming:hover { border-color: var(--border); box-shadow: none; }
+[data-app-theme="dark"] .dashboard-content { position: relative; isolation: isolate; }
+[data-app-theme="dark"] .dashboard-content::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(circle at 38px 69px, #ffffffdc 0 1px, #ffffff25 2px, transparent 4px),
+    radial-gradient(circle at 187px 142px, #ffa265aa 0 1px, transparent 2px);
+  background-size: 291px 217px, 373px 283px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-app-theme="dark"] .dashboard-content::before { animation: dashboard-starshine 5s ease-in-out infinite alternate; }
+}
+@keyframes dashboard-starshine { from { opacity: .3; } to { opacity: .85; } }

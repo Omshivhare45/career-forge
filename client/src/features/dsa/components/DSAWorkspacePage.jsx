@@ -1,3 +1,4 @@
+import { useYouTubePlayer } from '../hooks/useYouTubePlayer';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { paths, prefetch } from '../../../api/curriculum';
@@ -6,7 +7,7 @@ import { useDsaSelection } from '../hooks/useDsaSelection';
 import ContentSkeleton from '../../../components/ContentSkeleton';
 import { roadmapPath } from '../../../utils/guestNavigation';
 import { useAuth } from '../../../context/AuthContext';
-import { FiMenu, FiChevronRight, FiCheckCircle, FiPlay, FiZap, FiBookOpen } from 'react-icons/fi';
+import { FiMenu, FiChevronRight, FiCheckCircle } from 'react-icons/fi';
 import { getDsaTopicNeighbors, getDsaTopicPath, getDsaTrackSections } from '../utils/dsaVideoCatalog';
 import { DSA_TUTORS, DSA_TUTOR_OPTIONS, readDsaVideoDone } from '../../../utils/dsaPersonalization';
 import WorkspaceSidebar from './WorkspaceSidebar';
@@ -43,6 +44,11 @@ export const DSAWorkspacePage = ({ activeTopic, pending, roadmapDomainId, render
     .map(t => t.topicId?._id || t.topicId), [user]);
   const sections = useMemo(() => getDsaTrackSections(course.data?.data?.phases || [], courseTopics, tutor),
     [course.data, courseTopics, tutor]);
+  const firstTopic = !activeTopic && sections.flatMap(section => section.topics)
+    .find(topic => topic.videos.some(video => video.embedUrl));
+  const firstLecture = firstTopic && firstTopic.videos.find(video => video.embedUrl);
+  const previewSrc = firstLecture?.embedUrl && firstLecture.embedUrl + (firstLecture.embedUrl.includes('?') ? '&' : '?') + 'enablejsapi=1';
+  useYouTubePlayer({ iframeId: 'roadmap-preview-video', enabled: Boolean(previewSrc), identity: previewSrc });
   const sectionTopic = sections.flatMap((section) => section.topics).find((item) =>
     item._id === activeTopicId && item.videos.some((video) => video.key === activeVideoKey));
   const topicVideos = sectionTopic?.videos || selection.topicVideos;
@@ -77,9 +83,9 @@ export const DSAWorkspacePage = ({ activeTopic, pending, roadmapDomainId, render
       <WorkspaceSidebar
         sections={sections}
         loading={course.loading || index.loading}
-        activeVideoKey={activeVideoKey}
+        activeVideoKey={activeVideoKey || firstLecture?.key}
         videoDone={videoDone}
-        activeTopicId={activeTopicId}
+        activeTopicId={activeTopicId || firstTopic?._id}
         completedTopicIds={completedTopicIds}
         onSelectTopic={handleSelectTopic}
         onSelectLesson={(topic, video) => {
@@ -115,35 +121,16 @@ export const DSAWorkspacePage = ({ activeTopic, pending, roadmapDomainId, render
         {(pending || ((course.loading || index.loading) && !activeTopic)) ? (
           <ContentSkeleton title="Loading lesson" />
         ) : !activeTopic ? (
-          /* ─── Empty / select-a-topic state ─── */
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="max-w-2xl mx-auto px-6 py-14 text-center">
-              <div className="w-16 h-16 mx-auto bg-[var(--primary-light)] text-[var(--primary)] rounded-2xl flex items-center justify-center text-3xl shadow-inner mb-5">🗺️</div>
-              <h1 className="text-2xl font-black text-[var(--text-main)] dark:text-[var(--text-main)] tracking-tight">Welcome to the DSA Learning Workspace</h1>
-              <p className="text-[var(--text-muted)] text-sm font-semibold mt-3 leading-relaxed">
-                Pick any topic from the roadmap on the left to start. Every topic bundles all its
-                video lectures, lesson notes and a code editor in one stable workspace — no more
-                juggling between the roadmap and separate topic pages.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 text-left">
-                <div className="card p-4 rounded-2xl space-y-2">
-                  <div className="w-9 h-9 bg-[var(--primary-light)] text-[var(--primary)] rounded-xl flex items-center justify-center"><FiPlay /></div>
-                  <div className="text-xs font-black text-[var(--text-main)]">Many videos per topic</div>
-                  <div className="text-[10px] text-[var(--text-muted)] font-semibold leading-relaxed">Watch every lecture for a topic without leaving the page.</div>
-                </div>
-                <div className="card p-4 rounded-2xl space-y-2">
-                  <div className="w-9 h-9 bg-[var(--primary-light)] text-[var(--primary)] rounded-xl flex items-center justify-center"><FiBookOpen /></div>
-                  <div className="text-xs font-black text-[var(--text-main)]">Lesson + editor</div>
-                  <div className="text-[10px] text-[var(--text-muted)] font-semibold leading-relaxed">Problem, constraints, hints and one code editor — side by side.</div>
-                </div>
-                <div className="card p-4 rounded-2xl space-y-2">
-                  <div className="w-9 h-9 bg-[var(--primary-light)] text-[var(--primary)] rounded-xl flex items-center justify-center"><FiZap /></div>
-                  <div className="text-xs font-black text-[var(--text-main)]">Progress tracked</div>
-                  <div className="text-[10px] text-[var(--text-muted)] font-semibold leading-relaxed">Video + topic progress persists as you learn.</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          firstLecture ? (
+            <section className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-5">
+              <iframe className="aspect-video w-full rounded-xl bg-black"
+                id="roadmap-preview-video" key={previewSrc} src={previewSrc} title={firstLecture.title}
+                allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen />
+              <h1 className="mt-4 text-lg font-bold">{firstLecture.title}</h1>
+              <button type="button" className="mt-2 text-sm font-bold text-[var(--primary)]"
+                onClick={() => navigate(getDsaTopicPath(firstTopic, firstLecture))}>Open lesson workspace</button>
+            </section>
+          ) : !(course.error || index.error) && <p role="status" className="p-5">No videos are available for this track yet.</p>
         ) : (
           <>
             {/* ─── STABLE HEADER ─── */}

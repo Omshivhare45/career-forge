@@ -16,7 +16,9 @@ const WebDevPlayground = ({ topicId, boilerplate, editorTheme, canSave }) => {
   const [lastSaved, setLastSaved] = useState(null);
   
   // Track if initial load is done to prevent overwriting with boilerplate
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(!canSave || !topicId);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const edited = useRef(false);
 
   // Debounce timer ref
   const saveTimer = useRef(null);
@@ -25,29 +27,32 @@ const WebDevPlayground = ({ topicId, boilerplate, editorTheme, canSave }) => {
   useEffect(() => {
     if (!canSave || !topicId) return;
     
+    let active = true;
     const fetchProject = async () => {
       try {
         const res = await api.get(`/progress/webdev-project/${topicId}`);
+        if (!active) return;
         if (res.data?.data?.files) {
           setFiles({
-            'index.html': res.data.data.files.html || boilerplate?.html || '',
-            'style.css': res.data.data.files.css || boilerplate?.css || '',
-            'script.js': res.data.data.files.js || boilerplate?.js || ''
+            'index.html': res.data.data.files.html ?? '',
+            'style.css': res.data.data.files.css ?? '',
+            'script.js': res.data.data.files.js ?? ''
           });
           setLastSaved(new Date(res.data.data.lastSavedAt));
         }
       } catch {
-        console.error("Failed to fetch web dev project state:", err);
+        if (active) setLoadFailed(true);
       } finally {
-        setIsLoaded(true);
+        if (active) setIsLoaded(true);
       }
     };
     fetchProject();
+    return () => { active = false; };
   }, [topicId, canSave]);
 
   // Debounced Auto-Save
   useEffect(() => {
-    if (!canSave || !isLoaded || !topicId) return;
+    if (!canSave || !isLoaded || loadFailed || !edited.current || !topicId) return;
 
     if (saveTimer.current) {
       clearTimeout(saveTimer.current);
@@ -73,10 +78,12 @@ const WebDevPlayground = ({ topicId, boilerplate, editorTheme, canSave }) => {
     }, 2500);
 
     return () => clearTimeout(saveTimer.current);
-  }, [files, isLoaded, topicId, canSave]);
+  }, [files, isLoaded, loadFailed, topicId, canSave]);
 
   const handleEditorChange = (val) => {
-    setFiles(prev => ({ ...prev, [activeFile]: val || '' }));
+    if ((val ?? '') === files[activeFile]) return;
+    edited.current = true;
+    setFiles(prev => ({ ...prev, [activeFile]: val ?? '' }));
   };
 
   const getLanguage = (filename) => {
@@ -134,7 +141,7 @@ const WebDevPlayground = ({ topicId, boilerplate, editorTheme, canSave }) => {
         
         <div className="flex items-center gap-3">
           <div className="text-[10px] text-gray-400 font-medium flex items-center gap-1.5">
-            {isSaving ? (
+            {loadFailed ? <span role="status">Saved project unavailable. Autosave paused.</span> : isSaving ? (
               <span className="animate-pulse flex items-center gap-1"><FiSave /> Saving...</span>
             ) : lastSaved ? (
               <span className="flex items-center gap-1 text-green-500"><FiCheckCircle /> Saved at {lastSaved.toLocaleTimeString()}</span>

@@ -1,3 +1,5 @@
+import GuestVisit from './components/GuestVisit';
+import RunSignInProvider from './components/RunSignInProvider';
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
@@ -61,6 +63,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
+        <RunSignInProvider>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -75,6 +78,7 @@ function App() {
           }}
         />
 
+        <GuestVisit />
         <InstallPrompt />
 
         <Suspense fallback={<ContentSkeleton />}>
@@ -158,6 +162,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </RunSignInProvider>
       </Router>
     </AuthProvider>
   );

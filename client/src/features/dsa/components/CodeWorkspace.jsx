@@ -62,7 +62,7 @@ export const CodeWorkspace = ({ ctx, variant }) => {
       `}>
         {isWebDevDomain ? (
           <WebDevPlayground
-          key={ctx.user?._id || "guest"}
+          key={[id, ctx.user?._id || "guest", ctx.canSaveTopic].join(":")}
           canSave={ctx.canSaveTopic}
             topicId={id}
             boilerplate={{
@@ -262,7 +262,7 @@ style={{
     >
       {isWebDevDomain ? (
         <WebDevPlayground
-          key={ctx.user?._id || "guest"}
+          key={[id, ctx.user?._id || "guest", ctx.canSaveTopic].join(":")}
           canSave={ctx.canSaveTopic}
           topicId={id}
           boilerplate={{

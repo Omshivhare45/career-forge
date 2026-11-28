@@ -1,3 +1,4 @@
+import { useRunSignIn } from '../../../context/RunSignInContext';
 import { executeProgram } from '../utils/programExecution';
 import { getTopicEditorLanguage } from '../utils/editorLanguage';
 import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
@@ -33,6 +34,7 @@ export const useDSATopic = (topic, selection = {}) => {
   const id = topic._id;
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
+  const promptRunSignIn = useRunSignIn();
   const promptSignIn = useSignInPrompt();
 
   const getProgressKey = (slug) => {
@@ -775,7 +777,7 @@ export const useDSATopic = (topic, selection = {}) => {
   };
 
   const handleRunProgram = async () => {
-    if (!user) return promptSignIn('Sign in to run code.');
+    if (!user) return promptRunSignIn();
     if (compilerStatus === 'running') return;
     setCompilerStatus('running');
     setIsPanelCollapsed(false);
@@ -797,7 +799,7 @@ export const useDSATopic = (topic, selection = {}) => {
   // Shared run-code handler — wired via data so every topic uses the same flow
   const handleRunCode = async () => {
     if (isDsaDomain) return handleRunProgram();
-    if (!user) return promptSignIn("Sign in to run code.");
+    if (!user) return promptRunSignIn();
     setChallengePassed(false);
     setCompilerStatus('running');
     setActiveConsoleTab('result');
@@ -879,7 +881,7 @@ export const useDSATopic = (topic, selection = {}) => {
   // Checkpoint run — uses checkpoint test cases + function name
   const handleCheckpointRunCode = async () => {
     if (isDsaDomain) return handleRunProgram();
-    if (!user) return promptSignIn("Sign in to run code.");
+    if (!user) return promptRunSignIn();
     const cpContent = activeCheckpointContent;
     if (!cpContent) return;
     setChallengePassed(false);

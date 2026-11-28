@@ -1,7 +1,8 @@
+import WebDevPlaylist from '../components/WebDevPlaylist';
 import ContentSkeleton from '../components/ContentSkeleton';
 import { useCurriculum } from '../hooks/useCurriculum';
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/axios';
 import { paths, prefetch } from '../api/curriculum';
 import { useSignInPrompt } from '../hooks/useSignInPrompt';
@@ -59,6 +60,7 @@ const dsaLevelNames = DSA_LEVELS;
 const Roadmap = () => {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
   const promptSignIn = useSignInPrompt();
   const select = (name, value) => setParams(previous => {
@@ -66,7 +68,7 @@ const Roadmap = () => {
     if (value == null) next.delete(name);
     else next.set(name, String(value));
     return next;
-  });
+  }, { state: location.state });
   const [sheetSearch, setSheetSearch] = useState('');
   const [sheetCompany, setSheetCompany] = useState('All');
   const [sheetTopic, setSheetTopic] = useState('All');
@@ -89,7 +91,7 @@ const Roadmap = () => {
   };
 
   const activeDomainId = user?.activeDomain?._id || user?.activeDomain || user?.selectedDomain?._id || user?.selectedDomain;
-  const requested = params.get('domain');
+  const requested = params.get('domain') || location.state?.domainId;
   const explicitDomain = /^[\w-]+$/.test(requested || '') ? requested : activeDomainId;
   const directory = useCurriculum(explicitDomain ? null : '/domains');
   const domains = directory.data?.data;
@@ -281,12 +283,12 @@ const Roadmap = () => {
     );
   };
 
+  if (domain.slug === 'web-development') {
+    return <div className="mx-auto max-w-6xl px-6 pt-10 pb-20"><WebDevPlaylist /></div>;
+  }
+
   return (
     <div className="pb-20 max-w-6xl mx-auto px-6 pt-10 transition-colors duration-300">
-      
-
-
-
 
       {/* Segmented View Switcher */}
       {isDSA && (
@@ -296,31 +298,31 @@ const Roadmap = () => {
               onClick={() => select('view', 'path')}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
                 roadmapView === 'path'
-                  ? 'bg-gradient-to-r from-[var(--primary)] to-amber-500 text-white shadow-md'
+                  ? 'bg-[var(--primary)] text-[var(--dashboard-on-accent)]'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)]/50'
               }`}
             >
-              🗺️ Journey Roadmap
+              Journey Roadmap
             </button>
             <button
               onClick={() => select('view', 'sheet')}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
                 roadmapView === 'sheet'
-                  ? 'bg-gradient-to-r from-[var(--primary)] to-amber-500 text-white shadow-md'
+                  ? 'bg-[var(--primary)] text-[var(--dashboard-on-accent)]'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)]/50'
               }`}
             >
-              🔥 Company DSA Sheet
+              Company DSA Sheet
             </button>
             <button
               onClick={() => select('view', 'a2z')}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
                 roadmapView === 'a2z'
-                  ? 'bg-gradient-to-r from-[var(--primary)] to-amber-500 text-white shadow-md'
+                  ? 'bg-[var(--primary)] text-[var(--dashboard-on-accent)]'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)]/50'
               }`}
             >
-              📚 Striver A2Z Sheet
+              Striver A2Z Sheet
             </button>
           </div>
         </div>

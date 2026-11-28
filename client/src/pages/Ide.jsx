@@ -1,3 +1,4 @@
+import { useRunSignIn } from '../context/RunSignInContext';
 import { useState, useEffect, useRef } from 'react';
 import {
   FiPlay, FiTrash2, FiRotateCcw, FiCode, FiTerminal,
@@ -5,7 +6,6 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { useSignInPrompt } from '../hooks/useSignInPrompt';
 import CodeEditor from '../components/CodeEditor';
 import codeApi from '../api/codeApi';
 
@@ -65,7 +65,7 @@ const readStoredCode = () => {
 };
 
 const IdeWorkspace = ({ canSave }) => {
-  const promptSignIn = useSignInPrompt();
+  const promptRunSignIn = useRunSignIn();
   const rootRef = useRef(null);
 
   const [languageKey, setLanguageKey] = useState(() => (canSave && localStorage.getItem(LANGUAGE_KEY)) || 'cpp');
@@ -142,7 +142,7 @@ const IdeWorkspace = ({ canSave }) => {
   };
 
   const handleRun = async () => {
-    if (!canSave) return promptSignIn("Sign in to run code.");
+    if (!canSave) return promptRunSignIn();
     if (running) return;
     if (!code.trim()) {
       toast.error('Write some code first.');

@@ -1,29 +1,32 @@
+import AudienceOverview from './AudienceOverview';
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import api from '../../api/axios';
 import { 
-  FiUsers, 
-  FiMap, 
-  FiCheckSquare, 
-  FiAward, 
   FiSearch, 
   FiTrash2, 
   FiEye, 
   FiPlus, 
-  FiActivity, 
-  FiUserCheck, 
   FiX, 
-  FiClock, 
-  FiBookOpen, 
   FiSettings, 
-  FiTrendingUp,
   FiEdit,
   FiVideo,
-  FiFileText,
   FiStar
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import PlatformAnalytics from './PlatformAnalytics';
+
+const sections = {
+  overview: 'Overview', users: 'Users', analytics: 'Analytics', domains: 'Domains',
+  topics: 'Video links', curriculum: 'Topics', problems: 'Problems', submissions: 'Submissions',
+  academics: 'Academics', assessments: 'Assessments', feedback: 'Feedback',
+};
+const tools = {
+  curriculum: React.lazy(() => import('./ManageTopics')),
+  problems: React.lazy(() => import('./ManageProblems')),
+  submissions: React.lazy(() => import('./ManageSubmissions')),
+  academics: React.lazy(() => import('./ManageAcademics')),
+};
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -32,7 +35,10 @@ const AdminDashboard = () => {
   const [topics, setTopics] = useState([]);
   const [assessments, setAssessments] = useState([]);
   
-  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'domains' | 'topics' | 'assessments' | 'feedback' | 'analytics'
+  const { pathname, hash } = useLocation();
+  const section = hash.slice(1);
+  const activeTab = Object.hasOwn(sections, section) ? section : pathname === '/admin/users' ? 'users' : 'overview';
+  const Tool = tools[activeTab];
   const [loading, setLoading] = useState(true);
   const [selectedUserAnalytics, setSelectedUserAnalytics] = useState(null);
 
@@ -417,6 +423,11 @@ const AdminDashboard = () => {
     return matchesSearch && matchesRole;
   });
 
+  useEffect(() => {
+    if (activeTab === 'topics') fetchTopics();
+    if (activeTab === 'assessments') fetchAssessments();
+  }, [activeTab]);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 space-y-4">
@@ -428,114 +439,18 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-dashboard fade-in max-w-7xl mx-auto pb-16 px-4">
-      {/* Header and Welcome banner */}
-      <div className="admin-hero card p-8 bg-gradient-to-br from-indigo-50/70 to-emerald-50/40 dark:from-slate-900 dark:to-indigo-950/70 border border-indigo-100 dark:border-indigo-900/30 shadow-md dark:shadow-2xl rounded-3xl relative overflow-hidden mb-10">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 dark:bg-indigo-500/10 rounded-full blur-[80px]"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div>
-            <span className="text-[10px] font-black text-emerald-700 dark:text-indigo-400 uppercase tracking-widest bg-emerald-50 dark:bg-indigo-950 border border-emerald-200/60 dark:border-indigo-900/50 px-3 py-1 rounded-full">
-              Teammate Portal
-            </span>
-            <h1 className="text-3xl font-black text-slate-800 dark:text-white mt-3 mb-1 tracking-tight">Admin & Teammate Workspace</h1>
-            <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">Personalize student trajectories, oversee specializations, and customize platform curriculums.</p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="flex flex-wrap gap-2 bg-slate-100/80 dark:bg-slate-950/40 p-1 rounded-xl border border-slate-200/60 dark:border-white/5">
-              <button
-                onClick={() => setActiveTab('users')}
-                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${activeTab === 'users' ? 'bg-emerald-600 dark:bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
-              >
-                👥 Manage Users
-              </button>
-              <button
-                onClick={() => setActiveTab('domains')}
-                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${activeTab === 'domains' ? 'bg-emerald-600 dark:bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
-              >
-                🗺️ Domains
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('topics');
-                  fetchTopics();
-                }}
-                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${activeTab === 'topics' ? 'bg-emerald-600 dark:bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
-              >
-                📚 Topic Video Links
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('assessments');
-                  fetchAssessments();
-                }}
-                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${activeTab === 'assessments' ? 'bg-emerald-600 dark:bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
-              >
-                📝 Assign Assessments
-              </button>
-              <button
-                onClick={() => setActiveTab('feedback')}
-                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${activeTab === 'feedback' ? 'bg-emerald-600 dark:bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
-              >
-                ⭐ User Feedback
-              </button>
-              <button
-                onClick={() => setActiveTab('analytics')}
-                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${activeTab === 'analytics' ? 'bg-emerald-600 dark:bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
-              >
-                📊 Platform Analytics
-              </button>
-            </div>
-            <Link
-              to="/admin/academics"
-              className="px-4 py-2.5 rounded-xl text-xs font-black bg-blue-600 hover:bg-blue-500 text-white shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-            >
-              🎓 Academics Manager
-            </Link>
-            <Link
-              to="/dashboard"
-              className="px-4 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-            >
-              👁️ View as Student
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Statistics Overview row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
-        <div className="admin-stat-card bg-white border border-slate-100 dark:bg-slate-900/55 dark:border-white/5 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Total Registered</span>
-          <div className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-            <FiUsers className="text-indigo-650 dark:text-indigo-400 text-lg" /> {stats?.totalUsers || 0}
-          </div>
-        </div>
-        <div className="admin-stat-card bg-white border border-slate-100 dark:bg-slate-900/55 dark:border-white/5 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Students</span>
-          <div className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-            <FiUserCheck className="text-emerald-650 dark:text-emerald-400 text-lg" /> {stats?.totalStudents || 0}
-          </div>
-        </div>
-        <div className="admin-stat-card bg-white border border-slate-100 dark:bg-slate-900/55 dark:border-white/5 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Assigned Mentors</span>
-          <div className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-            <FiAward className="text-amber-550 dark:text-amber-400 text-lg" /> {stats?.totalMentors || 0}
-          </div>
-        </div>
-        <div className="admin-stat-card bg-white border border-slate-100 dark:bg-slate-900/55 dark:border-white/5 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Active Specializations</span>
-          <div className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-            <FiMap className="text-purple-650 dark:text-purple-400 text-lg" /> {stats?.totalDomains || 0}
-          </div>
-        </div>
-        <div className="admin-stat-card bg-white border border-slate-100 dark:bg-slate-900/55 dark:border-white/5 p-5 rounded-2xl col-span-2 md:col-span-1 shadow-sm hover:shadow-md transition-all duration-300">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Milestones</span>
-          <div className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-            <FiCheckSquare className="text-sky-650 dark:text-sky-400 text-lg" /> {stats?.totalAssessments || 0}
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs panels */}
+      <header className="pt-8 pb-6 flex flex-wrap items-end justify-between gap-4 border-b border-[var(--border)]">
+        <div><h1 className="text-4xl font-bold">{activeTab === 'overview' ? 'Platform overview' : sections[activeTab]}</h1>
+        <p className="mt-2 text-[var(--text-muted)]">Audience and learning activity across CareerForge.</p></div>
+        <div className="flex gap-5 text-sm font-semibold text-[var(--primary)]"><Link to="/dashboard">Student view</Link></div>
+      </header>
+      <nav aria-label="Administration" className="flex flex-wrap gap-2 py-5">
+        {Object.entries(sections).map(([key,label]) => <Link key={key} to={key === 'overview' ? '/admin' : '/admin#' + key}
+          aria-current={key === activeTab ? 'page' : undefined}
+          className="rounded-lg px-3 py-2 text-sm font-semibold text-[var(--land-nav)] hover:bg-[var(--bg-sub)] aria-[current=page]:bg-[var(--brand-green-light)] aria-[current=page]:text-[var(--primary)]">{label}</Link>)}
+      </nav>
+      {Tool && <React.Suspense fallback={<p role="status">Loading section?</p>}><Tool /></React.Suspense>}
+      {activeTab === 'overview' && <AudienceOverview stats={stats} users={users} />}
       {activeTab === 'analytics' && (
         <PlatformAnalytics />
       )}

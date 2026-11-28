@@ -1,7 +1,56 @@
 /* Landing-derived refinements, scoped to the internal application shell. */
-.careerforge-app { --bg-main: var(--land-bg-alt); font-family: 'Nunito', system-ui, sans-serif; }
+.careerforge-app { --bg-main: var(--land-bg-alt); font-family: Arial, Helvetica, sans-serif; }
+.careerforge-app[data-app-theme] {
+  --land-bg-alt: #f2f0ed;
+  --land-bg: #fcfbf9;
+  --bg-card: #ffffff;
+  --bg-sub: #eae7e3;
+  --border: #d8d4cd;
+  --border-light: #e4e0da;
+  --land-text: #24221f;
+  --land-nav: #554f49;
+  --text-muted: #635c54;
+  --brand-green: #9c410e;
+  --brand-green-hover: #79320d;
+  --brand-green-light: #ece2d7;
+  --dashboard-on-accent: #fffaf3;
+  --text-main: var(--land-text);
+  --primary: var(--brand-green);
+  --primary-hover: var(--brand-green-hover);
+  --primary-light: var(--brand-green-light);
+  --land-text-muted: var(--text-muted);
+  --shadow-soft: 0 4px 14px rgb(0 0 0 / 7%);
+  --shadow-bubbly: 0 6px 18px rgb(0 0 0 / 10%);
+  color-scheme: light;
+}
+.careerforge-app[data-app-theme="dark"] {
+  --land-bg-alt: #000000;
+  --land-bg: #0c0c0d;
+  --bg-card: #141414;
+  --bg-sub: #201f1d;
+  --border: #353330;
+  --border-light: #302f2c;
+  --land-text: #faf7f1;
+  --land-nav: #d0cbc3;
+  --text-muted: #b5afa6;
+  --brand-green: #ff883e;
+  --brand-green-hover: #ffab75;
+  --brand-green-light: #321e13;
+  --dashboard-on-accent: #251c15;
+  --shadow-soft: 0 4px 14px rgb(0 0 0 / 15%);
+  --shadow-bubbly: 0 6px 18px rgb(0 0 0 / 22%);
+  color-scheme: dark;
+}
+.careerforge-app[data-app-theme] .text-logo-gradient {
+  background: none;
+  color: var(--land-text);
+  -webkit-text-fill-color: currentColor;
+}
+.careerforge-app[data-app-theme] :is(.app-skip-link, .app-chat-launcher) {
+  color: var(--dashboard-on-accent);
+}
 .careerforge-app .card {
-  border-radius: 1.5rem;
+  border-radius: 1rem;
   box-shadow: var(--shadow-sm);
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
   transform-style: flat;
@@ -25,3 +74,43 @@
   .careerforge-app .card, .careerforge-app .btn-primary, .careerforge-app .btn-secondary { transition: none; }
   .careerforge-app .card-hover:hover, .careerforge-app .btn-primary:hover { transform: none; }
 }
+
+.careerforge-app[data-app-theme] .app-browse { position: relative; }
+.dashboard-content { font-family: Inter, "Segoe UI", Arial, sans-serif; }
+.dashboard-content :is(h1, h2, h3) { font-family: inherit; }
+.dashboard-content .dashboard-title {
+  font-size: clamp(2.15rem, 4.2vw, 3.6rem);
+  font-weight: 650;
+  letter-spacing: -.06em;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+.dashboard-content .dashboard-section-title {
+  font-size: clamp(1.8rem, 2.8vw, 2.65rem);
+  font-weight: 600;
+  letter-spacing: -.055em;
+  line-height: 1.15;
+}
+.dashboard-content .dashboard-heading-accent {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: -.055em;
+  color: var(--brand-green);
+}
+
+.careerforge-app :is(h1,h2,h3,h4) { font-family: Arial, Helvetica, sans-serif; }
+.careerforge-app .app-browse h1 { letter-spacing: -.05em; line-height: 1.12; }
+.careerforge-app .app-wordmark { letter-spacing: -.055em; }
+.careerforge-app .app-navigation { border-top: 1px solid var(--border); }
+.careerforge-app .app-navigation a { transition: background-color .16s, color .16s; }
+.careerforge-app .app-navigation a[aria-current="page"] { box-shadow: inset 2px 0 var(--primary); }
+.careerforge-app .btn-primary { background: var(--primary); color: var(--dashboard-on-accent) !important; box-shadow: none; border-radius: .55rem; }
+.careerforge-app .btn-secondary { background: var(--bg-card); border-color: var(--border); box-shadow: none; border-radius: .55rem; }
+
+.admin-metric { min-width: 0; padding: clamp(1rem,2vw,1.7rem); background: var(--bg-card); border: 1px solid var(--border); border-radius: 1rem; }
+.admin-metric :is(dt,h2) { color: var(--land-text); font-size: 1rem; font-weight: 650; }
+.admin-metric :is(p,dd:last-child) { color: var(--text-muted); font-size: .875rem; }
+.admin-count { color: var(--primary); font-size: clamp(2.4rem,4vw,3.6rem); line-height: 1.15; letter-spacing: -.055em; font-variant-numeric: tabular-nums; margin-block: .4rem; }
+.admin-role { margin-top: 1rem; }
+.admin-role div { display: flex; justify-content: space-between; text-transform: capitalize; font-size: .9rem; }
+.admin-role progress { width: 100%; height: .45rem; accent-color: var(--primary); }
